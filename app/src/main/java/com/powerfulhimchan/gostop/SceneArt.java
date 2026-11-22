@@ -56,14 +56,23 @@ final class SceneArt extends View {
     @Override
     protected void onMeasure(int widthSpec, int heightSpec) {
         int width = MeasureSpec.getSize(widthSpec);
-        setMeasuredDimension(width, width * ART_HEIGHT / ART_WIDTH);
+        int height = width * ART_HEIGHT / ART_WIDTH;
+        float screenHeight = getResources().getConfiguration().screenHeightDp
+                * getResources().getDisplayMetrics().density;
+        if (screenHeight > 0) {
+            height = Math.min(height, Math.round(screenHeight * 0.32f));
+        }
+        setMeasuredDimension(width, height);
     }
 
     @Override
     protected void onDraw(Canvas canvas) {
         super.onDraw(canvas);
         canvas.save();
-        canvas.scale(getWidth() / (float) ART_WIDTH, getHeight() / (float) ART_HEIGHT);
+        float scale = Math.min(getWidth() / (float) ART_WIDTH, getHeight() / (float) ART_HEIGHT);
+        canvas.translate((getWidth() - ART_WIDTH * scale) / 2,
+                (getHeight() - ART_HEIGHT * scale) / 2);
+        canvas.scale(scale, scale);
         paint.setAlpha(255);
         paint.setFilterBitmap(false);
         canvas.drawBitmap(background, null, bounds, paint);

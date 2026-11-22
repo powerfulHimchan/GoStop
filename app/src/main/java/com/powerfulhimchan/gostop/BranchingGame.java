@@ -3,17 +3,27 @@ package com.powerfulhimchan.gostop;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.EnumSet;
 import java.util.List;
+import java.util.Set;
 
 final class BranchingGame {
     static final int DECISIONS_PER_RUN = 3;
 
     private final List<Choice> history;
+    private final Set<Item> inventory;
     final Scene scene;
 
     private BranchingGame(Scene scene, List<Choice> history) {
         this.scene = scene;
         this.history = history;
+        Set<Item> items = EnumSet.noneOf(Item.class);
+        for (Choice choice : history) {
+            if (choice.reward != null) {
+                items.add(choice.reward);
+            }
+        }
+        inventory = Collections.unmodifiableSet(items);
     }
 
     static BranchingGame start() {
@@ -21,9 +31,13 @@ final class BranchingGame {
     }
 
     BranchingGame choose(Choice choice) {
-        if (scene.choices == null || !scene.choices.contains(choice)) {
+        if (!choices().contains(choice)) {
             throw new IllegalArgumentException("Choice is unavailable at " + scene);
         }
+        return advance(choice);
+    }
+
+    private BranchingGame advance(Choice choice) {
         List<Choice> nextHistory = new ArrayList<>(history);
         nextHistory.add(choice);
         return new BranchingGame(choice.destination(), nextHistory);
@@ -34,7 +48,31 @@ final class BranchingGame {
     }
 
     boolean isEnding() {
-        return scene.choices == null;
+        return scene.pair == null;
+    }
+
+    Set<Item> inventory() {
+        return inventory;
+    }
+
+    List<Choice> choices() {
+        if (isEnding()) {
+            return Collections.emptyList();
+        }
+        if (scene == Scene.ROPES && inventory.contains(Item.SAFETY_CLIP)) {
+            return Pair.CLIPPED_ROPES.choices;
+        }
+        return scene.pair.choices;
+    }
+
+    String description() {
+        if (scene == Scene.ROPES && inventory.contains(Item.SAFETY_CLIP)) {
+            return "안내인이 매듭을 단단히 조였다.\n안전 고리를 걸면 흔들리는 다리에서 몸을 지탱할 수 있다.";
+        }
+        if (scene == Scene.TOGETHER && history.get(history.size() - 1) == Choice.CLIP_AND_CROSS) {
+            return "안전 고리를 밧줄에 건 채 다리를 건넜다.\n맞은편에 도착해 고리를 풀자 안내인이 따라온다.";
+        }
+        return scene.description;
     }
 
     BranchingGame replayBranch() {
@@ -62,18 +100,20 @@ final class BranchingGame {
             if (next == null) {
                 break;
             }
-            game = game.choose(next);
+            game = game.advance(next);
         }
         return game;
     }
 
     private Choice findChoice(String id) {
-        if (!isEnding()) {
-            for (Choice choice : scene.choices) {
-                if (choice.saveId.equals(id)) {
-                    return choice;
-                }
+        for (Choice choice : choices()) {
+            if (choice.saveId.equals(id)) {
+                return choice;
             }
+        }
+        // Earlier saves could cross after helping the guide, before that action awarded a clip.
+        if (scene == Scene.ROPES && Choice.CROSS.saveId.equals(id)) {
+            return Choice.CROSS;
         }
         return null;
     }
@@ -99,38 +139,38 @@ final class BranchingGame {
 
     enum Scene {
         ARRIVAL("흔들리는 다리",
-                "비에 불어난 물이 발밑을 휘감는다. 굽은 다리 끝에서 누군가 밧줄을 붙잡은 채 내 쪽을 바라본다.",
+                "불어난 물이 발밑을 휘감는다.\n다리 끝에 밧줄을 붙잡고 있는 사람이 보인다.",
                 Pair.OPENING),
         GUIDE("밧줄을 붙든 사람",
-                "안내인이 밧줄을 빼내려 애쓴다. 손을 떼면 난간이 무너질 것 같다. 내 손에는 등불이 하나 있다.",
+                "안내인이 느슨해진 밧줄을 붙잡고 있다.\n내 손에는 매듭을 비춰 줄 등불이 있다.",
                 Pair.GUIDE),
         BANK("강가의 흔적",
-                "다리 아래 물보라 사이로 돌턱이 보인다. 맞은편의 안내인은 어둠 속에서 풀린 매듭을 더듬는다.",
+                "물보라 사이로 돌턱이 보인다.\n맞은편에서는 안내인이 풀린 매듭을 더듬는다.",
                 Pair.BANK),
         ROPES("다시 팽팽해진 밧줄",
-                "등불에 비친 매듭이 단단히 조여졌다. 안내인이 손을 내민다. “한 사람씩 발을 옮겨요.”",
+                "안내인이 매듭을 단단히 조인다.\n“한 사람씩 발을 옮겨요.”",
                 Pair.ROPES),
         LEDGE("바위 아래 좁은 길",
-                "강물이 다리의 헐거운 기둥을 때린다. 바위 아래로 이어지는 돌턱을 따라가면 반대편 기슭에 닿는다.",
+                "강물이 다리 기둥을 때린다.\n바위 아래 돌턱은 맞은편 기슭까지 이어진다.",
                 Pair.LEDGE),
         TOGETHER("함께 건넌 길",
-                "안내인과 번갈아 밧줄을 잡으며 다리를 건넜다. 뒤돌아보니 숲 양쪽에 등불이 하나씩 흔들린다.",
+                "안내인과 번갈아 밧줄을 잡으며 다리를 건넜다.\n뒤를 돌아보니 숲 양쪽에서 등불이 흔들린다.",
                 null),
         SIDE_PATH("물가에 남은 발자국",
-                "돌턱을 하나씩 밟고 반대편 기슭에 닿았다. 건너편에서도 내가 지나온 발자국이 길게 보인다.",
+                "돌턱을 하나씩 밟아 맞은편 기슭에 닿았다.\n건너온 길에 발자국이 길게 남아 있다.",
                 null),
         WAIT("비가 그칠 때까지",
-                "나무 아래로 물러나 등불을 내려놓았다. 물이 빠지자 이곳에서 기다리길 잘했다는 듯 잎 사이로 빛이 든다.",
+                "나무 아래로 물러나 등불을 내려놓았다.\n물이 빠지고 잎 사이로 빛이 든다.",
                 null);
 
         final String title;
         final String description;
-        final List<Choice> choices;
+        private final Pair pair;
 
         Scene(String title, String description, Pair pair) {
             this.title = title;
             this.description = description;
-            this.choices = pair == null ? null : pair.choices;
+            this.pair = pair;
         }
     }
 
@@ -139,6 +179,7 @@ final class BranchingGame {
         GUIDE(Choice.LAMP, Choice.ASK),
         BANK(Choice.INSPECT, Choice.SIGNAL),
         ROPES(Choice.CROSS, Choice.RETREAT),
+        CLIPPED_ROPES(Choice.CLIP_AND_CROSS, Choice.RETREAT),
         LEDGE(Choice.FOLLOW, Choice.RETREAT);
 
         final List<Choice> choices;
@@ -148,14 +189,26 @@ final class BranchingGame {
         }
     }
 
+    enum Item {
+        SAFETY_CLIP("안전 고리", "안내인이 건네준 금속 고리. 난간 밧줄에 걸어 몸을 지탱할 수 있다.");
+
+        final String name;
+        final String description;
+
+        Item(String name, String description) {
+            this.name = name;
+            this.description = description;
+        }
+    }
+
     enum Choice {
         HELP("help", "밧줄을 붙든 사람에게 다가간다",
                 "안내인에게 말을 걸어 다리를 살필 기회를 얻었어요.", null),
         LOOK("look", "강가를 먼저 살핀다",
                 "강가에서 돌턱과 안내인의 위치를 확인했어요.", null),
         LAMP("lamp", "안내인에게 등불을 비춰 준다",
-                "등불을 비춘 덕에 안내인이 난간의 매듭을 다시 묶었어요.",
-                "새로 묶은 난간 아래로도 강물이 세차게 흐르는 걸 봤어요."),
+                "안내인이 매듭을 다시 묶고 안전 고리를 건네줬어요.",
+                "새로 묶은 난간 아래로도 강물이 세차게 흐르는 걸 봤어요.", Item.SAFETY_CLIP),
         ASK("ask", "다리 말고 다른 길을 묻는다",
                 "안내인에게서 물가의 돌턱이 맞은편까지 이어진다는 걸 들었어요.",
                 "안내인이 물이 더 오르면 돌턱도 잠긴다고 알려 줬어요."),
@@ -167,6 +220,8 @@ final class BranchingGame {
                 "안내인과 함께 물살이 약해질 때까지 기다릴 곳을 확인했어요."),
         CROSS("cross", "안내인과 함께 다리를 건넌다",
                 "서로가 발을 옮길 때마다 밧줄을 잡아 주며 건넜어요.", null),
+        CLIP_AND_CROSS("clip_cross", "안전 고리를 걸고 다리를 건넌다",
+                "안전 고리를 밧줄에 걸어 몸을 지탱하며 건넜어요.", null),
         FOLLOW("follow", "물가의 돌턱을 따라 건넌다",
                 "확인한 길을 따라 반대편 기슭에 닿았어요.", null),
         RETREAT("retreat", "안전한 곳으로 돌아가 기다린다", null, null);
@@ -175,12 +230,18 @@ final class BranchingGame {
         final String label;
         final String crossingEffect;
         final String waitEffect;
+        final Item reward;
 
         Choice(String saveId, String label, String crossingEffect, String waitEffect) {
+            this(saveId, label, crossingEffect, waitEffect, null);
+        }
+
+        Choice(String saveId, String label, String crossingEffect, String waitEffect, Item reward) {
             this.saveId = saveId;
             this.label = label;
             this.crossingEffect = crossingEffect;
             this.waitEffect = waitEffect;
+            this.reward = reward;
         }
 
         Scene destination() {
@@ -191,7 +252,8 @@ final class BranchingGame {
                 case SIGNAL: return Scene.ROPES;
                 case ASK:
                 case INSPECT: return Scene.LEDGE;
-                case CROSS: return Scene.TOGETHER;
+                case CROSS:
+                case CLIP_AND_CROSS: return Scene.TOGETHER;
                 case FOLLOW: return Scene.SIDE_PATH;
                 case RETREAT: return Scene.WAIT;
                 default: throw new AssertionError(this);

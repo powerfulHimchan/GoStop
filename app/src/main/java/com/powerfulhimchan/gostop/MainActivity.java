@@ -1,6 +1,7 @@
 package com.powerfulhimchan.gostop;
 
 import android.app.Activity;
+import android.app.AlertDialog;
 import android.content.SharedPreferences;
 import android.content.res.ColorStateList;
 import android.graphics.Insets;
@@ -9,6 +10,9 @@ import android.graphics.drawable.GradientDrawable;
 import android.graphics.drawable.RippleDrawable;
 import android.os.Build;
 import android.os.Bundle;
+import android.text.SpannableStringBuilder;
+import android.text.Spanned;
+import android.text.style.StyleSpan;
 import android.view.Gravity;
 import android.view.View;
 import android.view.WindowInsets;
@@ -17,15 +21,16 @@ import android.widget.FrameLayout;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.TextView;
+import android.widget.Toast;
 
 public final class MainActivity extends Activity {
     private static final String SAVE = "choices_v1";
+    private static final String INVENTORY_OPEN = "inventory_open";
     private static final int BACKGROUND = 0xFF0E1524;
     private static final int PANEL = 0xFF182438;
     private static final int BORDER = 0xFF3B4B62;
     private static final int TITLE = 0xFFFFF2DC;
     private static final int TEXT = 0xFFDDE6F2;
-    private static final int MUTED = 0xFFB2C0D4;
     private static final int GOLD = 0xFFF5C482;
     private static final int MINT = 0xFF8CE0CC;
 
@@ -36,6 +41,8 @@ public final class MainActivity extends Activity {
     private TextView phase;
     private TextView title;
     private TextView description;
+    private Button inventoryButton;
+    private AlertDialog inventoryDialog;
     private LinearLayout influences;
     private final Button[] buttons = new Button[2];
 
@@ -46,6 +53,23 @@ public final class MainActivity extends Activity {
         game = BranchingGame.restore(progress.getString(SAVE, ""));
         buildLayout();
         showScene();
+        if (savedInstanceState != null && savedInstanceState.getBoolean(INVENTORY_OPEN)) {
+            showInventory();
+        }
+    }
+
+    @Override
+    protected void onSaveInstanceState(Bundle state) {
+        super.onSaveInstanceState(state);
+        state.putBoolean(INVENTORY_OPEN, inventoryDialog != null && inventoryDialog.isShowing());
+    }
+
+    @Override
+    protected void onDestroy() {
+        if (inventoryDialog != null) {
+            inventoryDialog.dismiss();
+        }
+        super.onDestroy();
     }
 
     private void buildLayout() {
@@ -85,8 +109,10 @@ public final class MainActivity extends Activity {
         TextView brand = text(20, TITLE, true);
         brand.setText(R.string.app_name);
         header.addView(brand, new LinearLayout.LayoutParams(0, -2, 1));
-        phase = text(13, GOLD, true);
-        header.addView(phase);
+        inventoryButton = actionButton(14, 48);
+        inventoryButton.setGravity(Gravity.CENTER);
+        inventoryButton.setOnClickListener(view -> showInventory());
+        header.addView(inventoryButton, new LinearLayout.LayoutParams(-2, -2));
         add(content, header, 10);
 
         scroll = new ScrollView(this);
@@ -107,13 +133,15 @@ public final class MainActivity extends Activity {
         LinearLayout story = column();
         story.setPadding(dp(14), dp(12), dp(14), dp(14));
         story.setBackground(surface(PANEL, BORDER, 16));
+        phase = text(13, GOLD, true);
+        add(story, phase, 0);
         title = text(23, TITLE, true);
         if (Build.VERSION.SDK_INT >= 28) {
             title.setAccessibilityHeading(true);
         }
-        add(story, title, 0);
-        description = text(16, TEXT, false);
-        description.setLineSpacing(dp(4), 1);
+        add(story, title, 3);
+        description = text(18, TEXT, false);
+        description.setLineSpacing(dp(6), 1);
         add(story, description, 8);
         add(body, story, 12);
 
@@ -123,16 +151,8 @@ public final class MainActivity extends Activity {
         LinearLayout footer = column();
         footer.setPadding(0, dp(4), 0, dp(10));
         for (int i = 0; i < buttons.length; i++) {
-            Button button = new Button(this);
-            button.setAllCaps(false);
+            Button button = actionButton(16, 54);
             button.setGravity(Gravity.START | Gravity.CENTER_VERTICAL);
-            button.setTextSize(16);
-            button.setTypeface(null, Typeface.BOLD);
-            button.setTextColor(TITLE);
-            button.setMinHeight(dp(54));
-            button.setPadding(dp(16), dp(8), dp(16), dp(8));
-            button.setBackground(new RippleDrawable(ColorStateList.valueOf(0x38F5C482),
-                    surface(0xFF223349, BORDER, 12), null));
             buttons[i] = button;
             add(footer, button, i == 0 ? 0 : 8);
         }
@@ -142,11 +162,12 @@ public final class MainActivity extends Activity {
     private void showScene() {
         artwork.show(game.scene);
         title.setText(game.scene.title);
-        description.setText(game.scene.description);
+        description.setText(game.description());
+        inventoryButton.setText(getString(R.string.inventory_count, game.inventory().size()));
         influences.removeAllViews();
         if (game.isEnding()) {
             phase.setText(R.string.ending);
-            TextView heading = text(14, MINT, true);
+            TextView heading = text(16, MINT, true);
             heading.setText(R.string.ending_choices);
             add(influences, heading, 0);
             for (BranchingGame.Influence influence : game.endingInfluences()) {
@@ -160,11 +181,42 @@ public final class MainActivity extends Activity {
             phase.setText(getString(R.string.chapter_progress,
                     game.decisionNumber(), BranchingGame.DECISIONS_PER_RUN));
             for (int i = 0; i < buttons.length; i++) {
-                BranchingGame.Choice choice = game.scene.choices.get(i);
+                BranchingGame.Choice choice = game.choices().get(i);
                 buttons[i].setText(choice.label);
-                buttons[i].setOnClickListener(view -> changeGame(game.choose(choice)));
+                buttons[i].setOnClickListener(view -> selectChoice(choice));
             }
         }
+    }
+
+    private void selectChoice(BranchingGame.Choice choice) {
+        BranchingGame.Item reward = choice.reward;
+        boolean gainedItem = reward != null && !game.inventory().contains(reward);
+        changeGame(game.choose(choice));
+        if (gainedItem) {
+            Toast.makeText(this, getString(R.string.item_acquired, reward.name), Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    private void showInventory() {
+        SpannableStringBuilder items = new SpannableStringBuilder();
+        for (BranchingGame.Item item : game.inventory()) {
+            if (items.length() > 0) {
+                items.append("\n\n");
+            }
+            int nameStart = items.length();
+            items.append(item.name);
+            items.setSpan(new StyleSpan(Typeface.BOLD), nameStart, items.length(),
+                    Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+            items.append('\n').append(item.description);
+        }
+        if (items.length() == 0) {
+            items.append(getText(R.string.inventory_empty));
+        }
+        inventoryDialog = new AlertDialog.Builder(this)
+                .setTitle(R.string.inventory)
+                .setMessage(items)
+                .setPositiveButton(R.string.close, null)
+                .show();
     }
 
     private void changeGame(BranchingGame next) {
@@ -179,13 +231,27 @@ public final class MainActivity extends Activity {
         LinearLayout card = column();
         card.setPadding(dp(12), dp(8), dp(12), dp(8));
         card.setBackground(surface(PANEL, BORDER, 10));
-        TextView chosen = text(14, TITLE, true);
+        TextView chosen = text(16, TITLE, true);
         chosen.setText(influence.label);
         add(card, chosen, 0);
-        TextView result = text(13, MUTED, false);
+        TextView result = text(16, TEXT, false);
+        result.setLineSpacing(dp(4), 1);
         result.setText(influence.effect);
-        add(card, result, 3);
-        add(influences, card, 6);
+        add(card, result, 4);
+        add(influences, card, 8);
+    }
+
+    private Button actionButton(int size, int minHeight) {
+        Button button = new Button(this);
+        button.setAllCaps(false);
+        button.setTextSize(size);
+        button.setTypeface(null, Typeface.BOLD);
+        button.setTextColor(TITLE);
+        button.setMinHeight(dp(minHeight));
+        button.setPadding(dp(16), dp(8), dp(16), dp(8));
+        button.setBackground(new RippleDrawable(ColorStateList.valueOf(0x38F5C482),
+                surface(0xFF223349, BORDER, 12), null));
+        return button;
     }
 
     private LinearLayout column() {
