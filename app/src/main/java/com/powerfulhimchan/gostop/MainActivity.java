@@ -39,6 +39,8 @@ public final class MainActivity extends Activity {
     private static final String SAVE = "choices_v3";
     private static final String PREVIOUS_SAVE = "choices_v2";
     private static final String STORY_EDITION = "story_edition";
+    private static final String STORY_REVISION = "story_revision";
+    private static final int CURRENT_STORY_REVISION = 1;
     private static final String NEW_STORY = "branches";
     private static final String LEGACY_STORY = "dispatch";
     private static final String ENDING_PREFIX = "seen_ending_";
@@ -78,10 +80,16 @@ public final class MainActivity extends Activity {
         edition = progress.getString(STORY_EDITION, oldSave.isEmpty() ? NEW_STORY : LEGACY_STORY);
         story = loadStory(edition);
         if (progress.contains(SAVE)) {
-            game = BranchingGame.restore(story, progress.getString(SAVE, ""));
+            boolean migrate = NEW_STORY.equals(edition)
+                    && progress.getInt(STORY_REVISION, 0) < CURRENT_STORY_REVISION;
+            game = migrate ? BranchingGame.restorePrevious(story, oldSave)
+                    : BranchingGame.restore(story, oldSave);
             int savedInterlude = progress.getInt(INTERLUDE_INDEX, -1);
             if (savedInterlude >= 0 && savedInterlude < game.interludes().size()) {
                 interludeIndex = savedInterlude;
+            }
+            if (migrate) {
+                saveProgress();
             }
         } else {
             game = BranchingGame.restorePrevious(story, progress.getString(PREVIOUS_SAVE, ""));
@@ -307,9 +315,10 @@ public final class MainActivity extends Activity {
     private void selectChoice(BranchingGame.Choice choice) {
         Set<BranchingGame.Item> previousItems = game.inventory();
         BranchingGame next = game.choose(choice);
-        boolean hasInterludes = !choice.interludes.isEmpty();
+        List<Story.Interlude> interludes = next.interludes();
+        boolean hasInterludes = !interludes.isEmpty();
         changeGame(next, hasInterludes ? 0 : -1,
-                hasInterludes ? choice.interludes.get(0).motion : choice.motion);
+                hasInterludes ? interludes.get(0).motion : choice.motion);
         for (BranchingGame.Item item : next.inventory()) {
             if (!previousItems.contains(item)) {
                 String name = item.displayName(LEGACY_STORY.equals(edition));
@@ -320,8 +329,9 @@ public final class MainActivity extends Activity {
 
     private void advanceInterlude() {
         int nextIndex = interludeIndex + 1;
-        if (nextIndex < game.interludes().size()) {
-            changeGame(game, nextIndex, game.interludes().get(nextIndex).motion);
+        List<Story.Interlude> interludes = game.interludes();
+        if (nextIndex < interludes.size()) {
+            changeGame(game, nextIndex, interludes.get(nextIndex).motion);
         } else {
             changeGame(game, -1, Story.Motion.STOP);
         }
@@ -455,7 +465,8 @@ public final class MainActivity extends Activity {
 
     private void saveProgress() {
         SharedPreferences.Editor editor = progress.edit().putString(SAVE, game.save())
-                .putInt(INTERLUDE_INDEX, interludeIndex).putString(STORY_EDITION, edition);
+                .putInt(INTERLUDE_INDEX, interludeIndex).putString(STORY_EDITION, edition)
+                .putInt(STORY_REVISION, CURRENT_STORY_REVISION);
         recordEnding(editor).apply();
     }
 

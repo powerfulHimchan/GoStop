@@ -66,11 +66,13 @@ final class Story {
             List<Interlude> firstInterludes = new ArrayList<>();
             List<Interlude> secondInterludes = new ArrayList<>();
             for (int index = 4; index < block.size(); index++) {
-                String[] row = fields(block.get(index), 5);
+                String[] row = block.get(index).split("\\|", -1);
+                require(row.length == 5 || row.length == 6, "Invalid interlude: " + id);
                 require(row[0].equals(">a") || row[0].equals(">b") || row[0].equals(">both"),
                         "Unknown interlude branch: " + id);
                 Interlude interlude = new Interlude(Art.valueOf(row[1]), Motion.valueOf(row[2]),
-                        row[3], row[4].replace("\\n", "\n"));
+                        row[3], row[4].replace("\\n", "\n"),
+                        Condition.parse(row.length == 6 ? row[5] : ""));
                 if (!row[0].equals(">b")) {
                     firstInterludes.add(interlude);
                 }
@@ -184,7 +186,7 @@ final class Story {
     enum Art {
         ALLEY, OFFICE, KITCHEN, RIVER, DESK, CAFE, SUBWAY, HOME, ENTRY, WALK, DEPOT, GUITAR,
         BOOKSHOP, PORT, MUSICSHOP, ROOFTOP, CONTROL, PRINTSHOP, MARKET, VAN,
-        CHASE, STORE_MEET, PUBLISHER, PRESS, BUSAN_PUBLISHER, PROOFS
+        CHASE, STORE_MEET, PUBLISHER, PRESS, BUSAN_PUBLISHER, PROOFS, CHASE_STILL
     }
 
     enum Motion {
@@ -196,12 +198,18 @@ final class Story {
         final Motion motion;
         final String title;
         final String description;
+        private final Condition condition;
 
-        Interlude(Art art, Motion motion, String title, String description) {
+        Interlude(Art art, Motion motion, String title, String description, Condition condition) {
             this.art = art;
             this.motion = motion;
             this.title = title;
             this.description = description;
+            this.condition = condition;
+        }
+
+        boolean isVisible(EnumSet<Mark> marks) {
+            return condition.matches(marks);
         }
     }
 

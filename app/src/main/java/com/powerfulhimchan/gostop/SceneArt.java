@@ -64,6 +64,7 @@ final class SceneArt extends View {
                 case MARKET -> R.drawable.story_market;
                 case VAN -> R.drawable.story_van;
                 case CHASE -> R.drawable.story_chase;
+                case CHASE_STILL -> R.drawable.story_chase_still;
                 case STORE_MEET -> R.drawable.story_store_meet;
                 case PUBLISHER -> R.drawable.story_publisher;
                 case PRESS -> R.drawable.story_press;
@@ -79,6 +80,9 @@ final class SceneArt extends View {
     }
 
     void play(Story.Motion nextMotion) {
+        if (currentArt == Story.Art.CHASE_STILL) {
+            return;
+        }
         motion = nextMotion;
         progress = 0f;
         animator = ValueAnimator.ofFloat(0f, 1f);
@@ -122,7 +126,8 @@ final class SceneArt extends View {
     }
 
     private boolean shouldAnimate() {
-        return currentArt != null && isAttachedToWindow() && getWindowVisibility() == VISIBLE
+        return currentArt != null && currentArt != Story.Art.CHASE_STILL
+                && isAttachedToWindow() && getWindowVisibility() == VISIBLE
                 && hasWindowFocus() && (Build.VERSION.SDK_INT < 26 || ValueAnimator.areAnimatorsEnabled());
     }
 

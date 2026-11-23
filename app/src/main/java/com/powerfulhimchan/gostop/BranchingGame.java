@@ -107,7 +107,16 @@ final class BranchingGame {
     }
 
     List<Story.Interlude> interludes() {
-        return history.isEmpty() ? Collections.emptyList() : history.get(history.size() - 1).interludes;
+        if (history.isEmpty()) {
+            return Collections.emptyList();
+        }
+        List<Story.Interlude> visible = new ArrayList<>();
+        for (Story.Interlude interlude : history.get(history.size() - 1).interludes) {
+            if (interlude.isVisible(marks)) {
+                visible.add(interlude);
+            }
+        }
+        return visible;
     }
 
     Set<Item> inventory() {
@@ -179,18 +188,19 @@ final class BranchingGame {
         SLIP, SAVED_NIGHT, REPORTED_DELAY, ROUTE_TEST, SAW_PATTERN,
         FOLLOW_RECORD, FOLLOW_LIFE, PATH_COMPANY, PATH_BOOK, PATH_BUSAN, PATH_LOCAL,
         COMPANY_SHARED, COMPANY_ALONE, BOOK_TOGETHER, BOOK_DEADLINE, BUSAN_STAY, BUSAN_OTHER,
-        LOCAL_PRESENT, LOCAL_MISSED, JOB_LETTER, LOCAL_JOB, TRUST, KEEP_DAY, PROJECT_LEFT, REGRET
+        LOCAL_PRESENT, LOCAL_MISSED, JOB_LETTER, LOCAL_JOB, TRUST, KEEP_DAY, PROJECT_LEFT, REGRET,
+        SLEPT_LATE, PROOF_PHOTO, THANKED_TAESIK, LONG_WALK, PACKED_LUNCH, EARLY_DINNER
     }
 
     enum Item {
-        KEYS(Mark.KEYS, "사원증과 열쇠", "늦은 밤, 경비실에서 돌려받은 물건. 야근을 마치고 집에 가던 날 떨어뜨렸다."),
+        KEYS(Mark.KEYS, "사원증과 열쇠", "야근을 마치고 집에 가던 날 떨어뜨린 뒤 되찾은 사원증과 집 열쇠."),
         JOURNAL(Mark.NOTEBOOK, "작은 노트", "회사 일과 상관없는 문장을 적기 시작한 노트."),
         SHOES(Mark.SHOES, "오래된 운동화", "현관 안쪽에 있던 운동화. 걸어서 돌아오기에도 충분하다."),
         GUITAR(Mark.GUITAR, "통기타", "준호가 오래 간직해 온 악기. 서랍에는 접힌 악보가 함께 있었다."),
         HANDOFF(Mark.HANDOFF, "인계 메모", "업무를 나눌 수 있도록 담당자와 남은 일정을 정리한 메모."),
         PORTFOLIO(Mark.PORTFOLIO, "포트폴리오", "준호가 맡았던 일과 함께 일한 사람을 기록한 문서."),
         MANUSCRIPT(Mark.MANUSCRIPT, "원고 묶음", "일 년 넘게 써 온 글 가운데 다시 읽고 싶은 문장들을 모은 원고."),
-        SLIP(Mark.SLIP, "첫 교정지", "인쇄 전에 확인하려고 뽑은 종이. 작가가 고친 문장 옆에 준호의 개인 번호와 ‘이번 주만’이라는 메모가 남아 있다."),
+        SLIP(Mark.SLIP, "첫 교정지", "인쇄 전에 확인한 첫 교정 기록. 작가가 고친 문장 옆에 준호의 개인 번호와 ‘이번 주만’이라는 메모가 남아 있다."),
         JOB_LETTER(Mark.JOB_LETTER, "서면 채용 제안서", "부산의 지역 출판사가 제안한 입사일과 편집 업무를 적은 종이. 채용이 미뤄졌을 때 원래 조건을 확인할 수 있다.");
 
         final Mark mark;
