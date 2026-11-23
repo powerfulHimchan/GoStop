@@ -57,10 +57,11 @@ final class SceneArt extends View {
     protected void onMeasure(int widthSpec, int heightSpec) {
         int width = MeasureSpec.getSize(widthSpec);
         int height = width * ART_HEIGHT / ART_WIDTH;
-        float screenHeight = getResources().getConfiguration().screenHeightDp
-                * getResources().getDisplayMetrics().density;
+        int heightDp = getResources().getConfiguration().screenHeightDp;
+        float screenHeight = heightDp * getResources().getDisplayMetrics().density;
         if (screenHeight > 0) {
-            height = Math.min(height, Math.round(screenHeight * 0.32f));
+            float maxScreenShare = heightDp < 550 ? 0.25f : 0.32f;
+            height = Math.min(height, Math.round(screenHeight * maxScreenShare));
         }
         setMeasuredDimension(width, height);
     }

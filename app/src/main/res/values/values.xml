@@ -10,11 +10,14 @@
     <string name="inventory_empty">아직 소지품이 없다.</string>
     <string name="item_acquired">%1$s 획득</string>
     <string name="close">닫기</string>
-    <style name="AppTheme" parent="android:style/Theme.Material.NoActionBar">
-        <item name="android:windowBackground">#0E1524</item>
-        <item name="android:statusBarColor">#0E1524</item>
-        <item name="android:navigationBarColor">#0E1524</item>
-        <item name="android:windowLightStatusBar">false</item>
-        <item name="android:colorAccent">#F5C482</item>
+    <color name="journal_background">#E5CFAE</color>
+    <color name="journal_paper">#F6EAD5</color>
+    <style name="AppTheme" parent="android:style/Theme.Material.Light.NoActionBar">
+        <item name="android:windowBackground">@color/journal_background</item>
+        <item name="android:statusBarColor">@color/journal_background</item>
+        <item name="android:navigationBarColor">#402E25</item>
+        <item name="android:windowLightStatusBar">true</item>
+        <item name="android:colorBackgroundFloating">@color/journal_paper</item>
+        <item name="android:colorAccent">#963F2D</item>
     </style>
 </resources>
