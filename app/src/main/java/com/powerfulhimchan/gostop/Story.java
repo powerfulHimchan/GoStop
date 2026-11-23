@@ -97,8 +97,7 @@ final class Story {
         }
         for (int step = 0; step < count; step++) {
             List<Scene> stage = decisions.get(step);
-            require(!stage.isEmpty() && stage.get(stage.size() - 1).condition.isFallback(),
-                    "Missing scene fallback at " + (step + 1));
+            require(!stage.isEmpty(), "Missing scenes at " + (step + 1));
         }
         require(referencedEndings.equals(endings.keySet()), "Unreferenced ending");
         return new Story(decisions, endings);
@@ -183,7 +182,8 @@ final class Story {
     }
 
     enum Art {
-        ALLEY, OFFICE, KITCHEN, RIVER, DESK, CAFE, SUBWAY, HOME, ENTRY, WALK, DEPOT, GUITAR
+        ALLEY, OFFICE, KITCHEN, RIVER, DESK, CAFE, SUBWAY, HOME, ENTRY, WALK, DEPOT, GUITAR,
+        BOOKSHOP, PORT, MUSICSHOP, ROOFTOP, CONTROL, PRINTSHOP, MARKET, VAN
     }
 
     enum Motion {

@@ -12,7 +12,20 @@
     <string name="inventory_hint">아이콘을 누르면 설명을 볼 수 있어.</string>
     <string name="item_acquired">%1$s 획득</string>
     <string name="close">닫기</string>
+    <string name="ending_archive">엔딩</string>
+    <string name="ending_archive_title">엔딩 모아보기</string>
+    <string name="ending_archive_empty">아직 본 엔딩이 없어.</string>
+    <string name="ending_archive_entry">%1$s · %2$s 엔딩</string>
+    <string name="new_story">새 분기 이야기 시작</string>
+    <string name="new_story_message">새 이야기의 첫 장면으로 이동할까? 모아둔 엔딩은 남아 있어.</string>
     <string-array name="story_acts">
+        <item>1막 · 쫓기는 밤</item>
+        <item>2막 · 첫 갈림길을 향해</item>
+        <item>3막 · 선택한 곳에서</item>
+        <item>4막 · 두 번째 갈림길</item>
+        <item>5막 · 내가 지킬 것</item>
+    </string-array>
+    <string-array name="legacy_acts">
         <item>1막 · 쫓기는 밤</item>
         <item>2막 · 내 시간 만들기</item>
         <item>3막 · 다시 무너지는 계획</item>

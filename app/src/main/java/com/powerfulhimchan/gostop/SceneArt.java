@@ -6,17 +6,26 @@ import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
 import android.graphics.Paint;
+import android.graphics.Rect;
 import android.graphics.RectF;
+import android.os.Build;
+import android.os.SystemClock;
 import android.view.View;
 import android.view.animation.LinearInterpolator;
 import java.util.EnumMap;
 
 final class SceneArt extends View {
     private static final float ASPECT = 1.5f;
+    private static final int AMBIENT_FRAME_MS = 70;
     private final EnumMap<Story.Art, Bitmap> illustrations = new EnumMap<>(Story.Art.class);
     private final RectF bounds = new RectF();
     private final Paint paint = new Paint();
+    private final SceneAmbience ambience = new SceneAmbience();
+    private final Rect visible = new Rect();
+    private final Runnable ambientFrame = this::advanceAmbience;
     private Bitmap illustration;
+    private Story.Art currentArt;
+    private long atmosphereStarted;
     private ValueAnimator animator;
     private Story.Motion motion;
     private float progress = 1f;
@@ -28,6 +37,8 @@ final class SceneArt extends View {
 
     void show(Story.Art art) {
         stopMotion();
+        currentArt = art;
+        atmosphereStarted = SystemClock.uptimeMillis();
         Bitmap next = illustrations.get(art);
         if (next == null) {
             int resource = switch (art) {
@@ -43,12 +54,21 @@ final class SceneArt extends View {
                 case ENTRY -> R.drawable.story_entry;
                 case WALK -> R.drawable.story_walk;
                 case DEPOT -> R.drawable.story_depot;
+                case BOOKSHOP -> R.drawable.story_bookshop;
+                case PORT -> R.drawable.story_port;
+                case MUSICSHOP -> R.drawable.story_musicshop;
+                case ROOFTOP -> R.drawable.story_rooftop;
+                case CONTROL -> R.drawable.story_control;
+                case PRINTSHOP -> R.drawable.story_printshop;
+                case MARKET -> R.drawable.story_market;
+                case VAN -> R.drawable.story_van;
             };
             next = BitmapFactory.decodeResource(getResources(), resource);
             illustrations.put(art, next);
         }
         illustration = next;
         invalidate();
+        updateAmbience();
     }
 
     void play(Story.Motion nextMotion) {
@@ -71,8 +91,49 @@ final class SceneArt extends View {
 
     @Override
     protected void onDetachedFromWindow() {
+        removeCallbacks(ambientFrame);
         stopMotion();
         super.onDetachedFromWindow();
+    }
+
+    @Override
+    protected void onAttachedToWindow() {
+        super.onAttachedToWindow();
+        updateAmbience();
+    }
+
+    @Override
+    protected void onWindowVisibilityChanged(int visibility) {
+        super.onWindowVisibilityChanged(visibility);
+        updateAmbience();
+    }
+
+    @Override
+    public void onWindowFocusChanged(boolean focused) {
+        super.onWindowFocusChanged(focused);
+        updateAmbience();
+    }
+
+    private boolean shouldAnimate() {
+        return currentArt != null && isAttachedToWindow() && getWindowVisibility() == VISIBLE
+                && hasWindowFocus() && (Build.VERSION.SDK_INT < 26 || ValueAnimator.areAnimatorsEnabled());
+    }
+
+    private void updateAmbience() {
+        removeCallbacks(ambientFrame);
+        if (shouldAnimate()) {
+            invalidate();
+            postDelayed(ambientFrame, AMBIENT_FRAME_MS);
+        }
+    }
+
+    private void advanceAmbience() {
+        if (shouldAnimate()) {
+            if (getLocalVisibleRect(visible)) {
+                invalidate();
+            }
+            postDelayed(ambientFrame, AMBIENT_FRAME_MS);
+        }
     }
 
     private void stopMotion() {
@@ -108,7 +169,7 @@ final class SceneArt extends View {
         float top = (getHeight() - height) / 2;
         bounds.set(left, top, left + width, top + height);
         if (motion == null || progress >= 1f) {
-            canvas.drawBitmap(illustration, null, bounds, null);
+            drawIllustration(canvas);
             return;
         }
         float remaining = 1f - progress;
@@ -127,10 +188,18 @@ final class SceneArt extends View {
         float zoom = 1f + (motion == Story.Motion.RUN ? 0.12f : 0.08f) * remaining;
         canvas.translate(shift, bounce);
         canvas.scale(zoom, zoom, bounds.centerX(), bounds.centerY());
-        canvas.drawBitmap(illustration, null, bounds, null);
+        drawIllustration(canvas);
         canvas.restore();
         drawMotionDetail(canvas, width, height);
         canvas.restore();
+    }
+
+    private void drawIllustration(Canvas canvas) {
+        canvas.drawBitmap(illustration, null, bounds, null);
+        if (shouldAnimate()) {
+            ambience.draw(canvas, bounds, currentArt,
+                    (SystemClock.uptimeMillis() - atmosphereStarted) / 1000f);
+        }
     }
 
     private void drawMotionDetail(Canvas canvas, float width, float height) {
