@@ -27,9 +27,13 @@ import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.Toast;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
+import java.util.Set;
 
 public final class MainActivity extends Activity {
-    private static final String SAVE = "choices_v1";
+    private static final String SAVE = "choices_v2";
     private static final String INVENTORY_OPEN = "inventory_open";
     private static final int PAPER = 0xFFF6EAD5;
     private static final int BUTTON_PAPER = 0xFFF9ECD7;
@@ -38,6 +42,7 @@ public final class MainActivity extends Activity {
     private static final int BRICK = 0xFF963F2D;
 
     private SharedPreferences progress;
+    private Story story;
     private BranchingGame game;
     private Typeface regular;
     private Typeface bold;
@@ -57,12 +62,22 @@ public final class MainActivity extends Activity {
         regular = Typeface.createFromAsset(getAssets(), "fonts/noto_sans_kr_regular.ttf");
         bold = Typeface.createFromAsset(getAssets(), "fonts/noto_sans_kr_bold.ttf");
         progress = getSharedPreferences("playthrough", MODE_PRIVATE);
-        game = BranchingGame.restore(progress.getString(SAVE, ""));
+        try (InputStreamReader scenes = storyFile("scenes.txt");
+             InputStreamReader endings = storyFile("endings.txt")) {
+            story = Story.read(scenes, endings);
+        } catch (IOException e) {
+            throw new IllegalStateException("Could not load GoStop story", e);
+        }
+        game = BranchingGame.restore(story, progress.getString(SAVE, ""));
         buildLayout();
         showScene();
         if (savedInstanceState != null && savedInstanceState.getBoolean(INVENTORY_OPEN)) {
             showInventory();
         }
+    }
+
+    private InputStreamReader storyFile(String name) throws IOException {
+        return new InputStreamReader(getAssets().open("story/" + name), StandardCharsets.UTF_8);
     }
 
     @Override
@@ -200,11 +215,12 @@ public final class MainActivity extends Activity {
     }
 
     private void showScene() {
-        artwork.show(game.scene);
-        title.setText(game.scene.title);
+        artwork.show(game.art());
+        title.setText(game.title());
         String narrative = game.description();
         SpannableStringBuilder body = new SpannableStringBuilder(narrative);
-        for (BranchingGame.Item item : game.inventory()) {
+        Set<BranchingGame.Item> inventory = game.inventory();
+        for (BranchingGame.Item item : inventory) {
             int start = narrative.indexOf(item.name);
             if (start >= 0) {
                 int end = start + item.name.length();
@@ -213,23 +229,23 @@ public final class MainActivity extends Activity {
             }
         }
         description.setText(body);
-        inventoryButton.setText(getString(R.string.inventory_count, game.inventory().size()));
+        inventoryButton.setText(getString(R.string.inventory_count, inventory.size()));
         influences.removeAllViews();
         if (game.isEnding()) {
-            phase.setText(R.string.ending);
+            phase.setText(getString(R.string.ending_type, game.ending().category));
             TextView heading = text(16, BRICK, true);
             heading.setText(R.string.ending_choices);
             add(influences, heading, 0);
-            for (BranchingGame.Influence influence : game.endingInfluences()) {
+            for (BranchingGame.Choice influence : game.endingInfluences()) {
                 addInfluence(influence);
             }
             buttons[0].setText(R.string.replay);
-            buttons[0].setOnClickListener(view -> changeGame(game.replayBranch()));
+            buttons[0].setOnClickListener(view -> showReplay());
             buttons[1].setText(R.string.restart);
-            buttons[1].setOnClickListener(view -> changeGame(BranchingGame.start()));
+            buttons[1].setOnClickListener(view -> changeGame(BranchingGame.start(story)));
         } else {
             phase.setText(getString(R.string.chapter_progress,
-                    game.decisionNumber(), BranchingGame.DECISIONS_PER_RUN));
+                    game.act(), game.decisionNumber(), BranchingGame.DECISIONS_PER_RUN));
             for (int i = 0; i < buttons.length; i++) {
                 BranchingGame.Choice choice = game.choices().get(i);
                 buttons[i].setText(choice.label);
@@ -239,12 +255,22 @@ public final class MainActivity extends Activity {
     }
 
     private void selectChoice(BranchingGame.Choice choice) {
-        BranchingGame.Item reward = choice.reward;
-        boolean gainedItem = reward != null && !game.inventory().contains(reward);
-        changeGame(game.choose(choice));
-        if (gainedItem) {
-            Toast.makeText(this, getString(R.string.item_acquired, reward.name), Toast.LENGTH_SHORT).show();
+        Set<BranchingGame.Item> previousItems = game.inventory();
+        BranchingGame next = game.choose(choice);
+        changeGame(next);
+        for (BranchingGame.Item item : next.inventory()) {
+            if (!previousItems.contains(item)) {
+                Toast.makeText(this, getString(R.string.item_acquired, item.name), Toast.LENGTH_SHORT).show();
+            }
         }
+    }
+
+    private void showReplay() {
+        new AlertDialog.Builder(this)
+                .setTitle(R.string.replay)
+                .setItems(R.array.story_acts, (dialog, index) -> changeGame(game.replayAct(index + 1)))
+                .setNegativeButton(R.string.close, null)
+                .show();
     }
 
     private void showInventory() {
@@ -286,10 +312,10 @@ public final class MainActivity extends Activity {
         progress.edit().putString(SAVE, game.save()).apply();
         showScene();
         scroll.scrollTo(0, 0);
-        title.announceForAccessibility(game.scene.title);
+        title.announceForAccessibility(game.title());
     }
 
-    private void addInfluence(BranchingGame.Influence influence) {
+    private void addInfluence(BranchingGame.Choice influence) {
         LinearLayout card = column();
         card.setPadding(dp(12), dp(8), dp(12), dp(8));
         card.setBackground(paper(PAPER));
