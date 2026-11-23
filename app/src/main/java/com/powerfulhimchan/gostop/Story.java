@@ -27,15 +27,22 @@ final class Story {
     static Story read(Reader sceneSource, Reader endingSource) throws IOException {
         Map<Integer, Ending> endings = new HashMap<>();
         for (List<String> block : blocks(endingSource)) {
-            require(block.size() == 6, "Ending needs four epilogue lines: " + block.get(0));
+            require(block.size() >= 6, "Ending needs two epilogue paragraphs: " + block.get(0));
             String[] header = fields(block.get(0), 5);
             int id = Integer.parseInt(header[0]);
-            List<Paragraph> epilogue = new ArrayList<>();
+            List<List<Paragraph>> epilogue = new ArrayList<>();
+            List<Paragraph> variants = new ArrayList<>();
             for (int index = 2; index < block.size(); index++) {
                 String[] row = fields(block.get(index), 2);
-                epilogue.add(new Paragraph(Condition.parse(row[0]), row[1]));
+                Condition condition = Condition.parse(row[0]);
+                variants.add(new Paragraph(condition, row[1]));
+                if (condition.isFallback()) {
+                    require(variants.size() >= 2, "Missing epilogue variation: " + id);
+                    epilogue.add(variants);
+                    variants = new ArrayList<>();
+                }
             }
-            require(epilogue.get(1).condition.isFallback() && epilogue.get(3).condition.isFallback(),
+            require(epilogue.size() == 2 && variants.isEmpty(),
                     "Missing epilogue fallback: " + id);
             Ending ending = new Ending(id, header[1], Art.valueOf(header[2]),
                     header[3], block.get(1), parseMarks(header[4]), epilogue);
@@ -50,14 +57,29 @@ final class Story {
         Set<String> sceneIds = new HashSet<>();
         Set<Integer> referencedEndings = new HashSet<>();
         for (List<String> block : blocks(sceneSource)) {
-            require(block.size() == 4, "Scene needs two choices: " + block.get(0));
+            require(block.size() >= 4, "Scene needs two choices: " + block.get(0));
             String[] header = fields(block.get(0), 5);
             int step = Integer.parseInt(header[0]);
             require(step >= 1 && step <= count, "Step out of range: " + step);
             String id = header[1];
             require(id.matches("[a-z0-9_]+") && sceneIds.add(id), "Invalid or duplicate scene ID: " + id);
-            Choice first = parseChoice(id + ":a", block.get(2));
-            Choice second = parseChoice(id + ":b", block.get(3));
+            List<Interlude> firstInterludes = new ArrayList<>();
+            List<Interlude> secondInterludes = new ArrayList<>();
+            for (int index = 4; index < block.size(); index++) {
+                String[] row = fields(block.get(index), 5);
+                require(row[0].equals(">a") || row[0].equals(">b") || row[0].equals(">both"),
+                        "Unknown interlude branch: " + id);
+                Interlude interlude = new Interlude(Art.valueOf(row[1]), Motion.valueOf(row[2]),
+                        row[3], row[4].replace("\\n", "\n"));
+                if (!row[0].equals(">b")) {
+                    firstInterludes.add(interlude);
+                }
+                if (!row[0].equals(">a")) {
+                    secondInterludes.add(interlude);
+                }
+            }
+            Choice first = parseChoice(id + ":a", block.get(2), firstInterludes, Motion.ENTER_LEFT);
+            Choice second = parseChoice(id + ":b", block.get(3), secondInterludes, Motion.ENTER_RIGHT);
             for (Choice choice : Arrays.asList(first, second)) {
                 if (step == count) {
                     require(endings.containsKey(choice.endingId), "Final choice needs a known ending: " + id);
@@ -95,8 +117,10 @@ final class Story {
         return endings.get(id);
     }
 
-    private static Choice parseChoice(String id, String line) throws IOException {
-        String[] row = fields(line, 4);
+    private static Choice parseChoice(String id, String line, List<Interlude> interludes,
+                                      Motion defaultMotion) throws IOException {
+        String[] row = line.split("\\|", -1);
+        require(row.length == 4 || row.length == 5, "Invalid choice: " + id);
         EnumSet<Mark> added = EnumSet.noneOf(Mark.class);
         EnumSet<Mark> removed = EnumSet.noneOf(Mark.class);
         if (!row[2].isEmpty()) {
@@ -110,7 +134,9 @@ final class Story {
         }
         require(Collections.disjoint(added, removed), "Conflicting mark changes: " + id);
         return new Choice(id, row[0], row[1], added, removed,
-                row[3].isEmpty() ? 0 : Integer.parseInt(row[3]));
+                row[3].isEmpty() ? 0 : Integer.parseInt(row[3]),
+                row.length == 5 ? Motion.valueOf(row[4]) : defaultMotion,
+                Collections.unmodifiableList(interludes));
     }
 
     private static List<List<String>> blocks(Reader source) throws IOException {
@@ -157,7 +183,25 @@ final class Story {
     }
 
     enum Art {
-        ALLEY, OFFICE, KITCHEN, RIVER, DESK, CAFE, SUBWAY, HOME
+        ALLEY, OFFICE, KITCHEN, RIVER, DESK, CAFE, SUBWAY, HOME, ENTRY, WALK, DEPOT, GUITAR
+    }
+
+    enum Motion {
+        ENTER_LEFT, ENTER_RIGHT, RUN, STOP, PHONE, HANDOFF, TRUCK, REVEAL
+    }
+
+    static final class Interlude {
+        final Art art;
+        final Motion motion;
+        final String title;
+        final String description;
+
+        Interlude(Art art, Motion motion, String title, String description) {
+            this.art = art;
+            this.motion = motion;
+            this.title = title;
+            this.description = description;
+        }
     }
 
     static final class Scene {
@@ -185,10 +229,10 @@ final class Story {
         final String title;
         final String body;
         final List<Mark> reasons;
-        private final List<Paragraph> epilogue;
+        private final List<List<Paragraph>> epilogue;
 
         Ending(int id, String category, Art art, String title, String body, List<Mark> reasons,
-               List<Paragraph> epilogue) {
+               List<List<Paragraph>> epilogue) {
             this.id = id;
             this.category = category;
             this.art = art;
@@ -199,12 +243,16 @@ final class Story {
         }
 
         String description(EnumSet<Mark> marks) {
-            return body + "\n\n" + paragraph(0, marks) + "\n\n" + paragraph(2, marks);
+            return body + "\n\n" + paragraph(0, marks) + "\n\n" + paragraph(1, marks);
         }
 
         private String paragraph(int index, EnumSet<Mark> marks) {
-            Paragraph variant = epilogue.get(index);
-            return variant.condition.matches(marks) ? variant.text : epilogue.get(index + 1).text;
+            for (Paragraph variant : epilogue.get(index)) {
+                if (variant.condition.matches(marks)) {
+                    return variant.text;
+                }
+            }
+            throw new IllegalStateException("Missing epilogue paragraph: " + id);
         }
     }
 

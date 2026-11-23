@@ -33,7 +33,9 @@ import java.nio.charset.StandardCharsets;
 import java.util.Set;
 
 public final class MainActivity extends Activity {
-    private static final String SAVE = "choices_v2";
+    private static final String SAVE = "choices_v3";
+    private static final String PREVIOUS_SAVE = "choices_v2";
+    private static final String INTERLUDE_INDEX = "interlude_index";
     private static final String INVENTORY_OPEN = "inventory_open";
     private static final int PAPER = 0xFFF6EAD5;
     private static final int BUTTON_PAPER = 0xFFF9ECD7;
@@ -44,6 +46,7 @@ public final class MainActivity extends Activity {
     private SharedPreferences progress;
     private Story story;
     private BranchingGame game;
+    private int interludeIndex = -1;
     private Typeface regular;
     private Typeface bold;
     private ScrollView scroll;
@@ -68,7 +71,16 @@ public final class MainActivity extends Activity {
         } catch (IOException e) {
             throw new IllegalStateException("Could not load GoStop story", e);
         }
-        game = BranchingGame.restore(story, progress.getString(SAVE, ""));
+        if (progress.contains(SAVE)) {
+            game = BranchingGame.restore(story, progress.getString(SAVE, ""));
+            int savedInterlude = progress.getInt(INTERLUDE_INDEX, -1);
+            if (savedInterlude >= 0 && savedInterlude < game.interludes().size()) {
+                interludeIndex = savedInterlude;
+            }
+        } else {
+            game = BranchingGame.restorePrevious(story, progress.getString(PREVIOUS_SAVE, ""));
+            saveProgress();
+        }
         buildLayout();
         showScene();
         if (savedInstanceState != null && savedInstanceState.getBoolean(INVENTORY_OPEN)) {
@@ -214,9 +226,10 @@ public final class MainActivity extends Activity {
     }
 
     private void showScene() {
-        artwork.show(game.art());
-        title.setText(game.title());
-        String narrative = game.description();
+        Story.Interlude interlude = interludeIndex < 0 ? null : game.interludes().get(interludeIndex);
+        artwork.show(interlude == null ? game.art() : interlude.art);
+        title.setText(interlude == null ? game.title() : interlude.title);
+        String narrative = interlude == null ? game.description() : interlude.description;
         SpannableStringBuilder body = new SpannableStringBuilder(narrative);
         Set<BranchingGame.Item> inventory = game.inventory();
         for (BranchingGame.Item item : inventory) {
@@ -230,7 +243,14 @@ public final class MainActivity extends Activity {
         description.setText(body);
         inventoryButton.setText(getString(R.string.inventory_count, inventory.size()));
         influences.removeAllViews();
-        if (game.isEnding()) {
+        buttons[1].setVisibility(interlude == null ? View.VISIBLE : View.GONE);
+        if (interlude != null) {
+            int act = (game.decisionNumber() - 2) / BranchingGame.DECISIONS_PER_ACT + 1;
+            phase.setText(getString(R.string.chapter, act));
+            buttons[0].setText(R.string.continue_story);
+            buttons[0].setOnClickListener(view -> advanceInterlude());
+            buttons[1].setOnClickListener(null);
+        } else if (game.isEnding()) {
             phase.setText(getString(R.string.ending_type, game.ending().category));
             TextView heading = text(16, BRICK, true);
             heading.setText(R.string.ending_choices);
@@ -241,10 +261,9 @@ public final class MainActivity extends Activity {
             buttons[0].setText(R.string.replay);
             buttons[0].setOnClickListener(view -> showReplay());
             buttons[1].setText(R.string.restart);
-            buttons[1].setOnClickListener(view -> changeGame(BranchingGame.start(story)));
+            buttons[1].setOnClickListener(view -> changeGame(BranchingGame.start(story), -1, null));
         } else {
-            phase.setText(getString(R.string.chapter_progress,
-                    game.act(), game.decisionNumber(), BranchingGame.DECISIONS_PER_RUN));
+            phase.setText(getString(R.string.chapter, game.act()));
             for (int i = 0; i < buttons.length; i++) {
                 BranchingGame.Choice choice = game.choices().get(i);
                 buttons[i].setText(choice.label);
@@ -256,7 +275,9 @@ public final class MainActivity extends Activity {
     private void selectChoice(BranchingGame.Choice choice) {
         Set<BranchingGame.Item> previousItems = game.inventory();
         BranchingGame next = game.choose(choice);
-        changeGame(next);
+        boolean hasInterludes = !choice.interludes.isEmpty();
+        changeGame(next, hasInterludes ? 0 : -1,
+                hasInterludes ? choice.interludes.get(0).motion : choice.motion);
         for (BranchingGame.Item item : next.inventory()) {
             if (!previousItems.contains(item)) {
                 Toast.makeText(this, getString(R.string.item_acquired, item.name), Toast.LENGTH_SHORT).show();
@@ -264,38 +285,53 @@ public final class MainActivity extends Activity {
         }
     }
 
+    private void advanceInterlude() {
+        int nextIndex = interludeIndex + 1;
+        if (nextIndex < game.interludes().size()) {
+            changeGame(game, nextIndex, game.interludes().get(nextIndex).motion);
+        } else {
+            changeGame(game, -1, Story.Motion.STOP);
+        }
+    }
+
     private void showReplay() {
         new AlertDialog.Builder(this)
                 .setTitle(R.string.replay)
-                .setItems(R.array.story_acts, (dialog, index) -> changeGame(game.replayAct(index + 1)))
+                .setItems(R.array.story_acts,
+                        (dialog, index) -> changeGame(game.replayAct(index + 1), -1, null))
                 .setNegativeButton(R.string.close, null)
                 .show();
     }
 
     private void showInventory() {
-        SpannableStringBuilder items = new SpannableStringBuilder();
-        for (BranchingGame.Item item : game.inventory()) {
-            if (items.length() > 0) {
-                items.append("\n\n");
-            }
-            int nameStart = items.length();
-            items.append(item.name);
-            items.setSpan(new StyleSpan(Typeface.BOLD), nameStart, items.length(),
-                    Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
-            items.append('\n').append(item.description);
-        }
-        if (items.length() == 0) {
-            items.append(getText(R.string.inventory_empty));
-        }
         TextView heading = text(21, INK, true);
         heading.setText(R.string.inventory);
         heading.setPadding(dp(24), dp(20), dp(24), dp(8));
-        TextView message = text(17, INK, false);
-        message.setText(items);
-        message.setPadding(dp(24), 0, dp(24), dp(12));
-        message.setLineSpacing(dp(4), 1);
+        LinearLayout contents = column();
+        contents.setPadding(dp(16), dp(4), dp(16), dp(12));
+        Set<BranchingGame.Item> items = game.inventory();
+        InventoryGrid grid = new InventoryGrid(this, items);
+        add(contents, grid, 0);
+        TextView itemName = text(17, INK, true);
+        itemName.setVisibility(View.GONE);
+        add(contents, itemName, 10);
+        TextView itemDescription = text(15, INK, false);
+        itemDescription.setLineSpacing(dp(3), 1);
+        itemDescription.setText(items.isEmpty() ? R.string.inventory_empty : R.string.inventory_hint);
+        add(contents, itemDescription, 6);
         ScrollView inventoryScroll = new ScrollView(this);
-        inventoryScroll.addView(message);
+        inventoryScroll.addView(contents);
+        grid.setOnItemSelected(item -> {
+            itemName.setText(item.name);
+            itemName.setVisibility(View.VISIBLE);
+            itemDescription.setText(item.description);
+            itemDescription.post(() -> {
+                itemDescription.requestRectangleOnScreen(
+                        new android.graphics.Rect(0, 0, itemDescription.getWidth(),
+                                itemDescription.getHeight()));
+            });
+            itemDescription.announceForAccessibility(item.name + ". " + item.description);
+        });
         inventoryDialog = new AlertDialog.Builder(this)
                 .setCustomTitle(heading)
                 .setView(inventoryScroll)
@@ -306,12 +342,20 @@ public final class MainActivity extends Activity {
         close.setTextColor(BRICK);
     }
 
-    private void changeGame(BranchingGame next) {
+    private void changeGame(BranchingGame next, int nextInterlude, Story.Motion motion) {
         game = next;
-        progress.edit().putString(SAVE, game.save()).apply();
+        interludeIndex = nextInterlude;
+        saveProgress();
         showScene();
+        if (motion != null) {
+            artwork.play(motion);
+        }
         scroll.scrollTo(0, 0);
-        title.announceForAccessibility(game.title());
+        title.announceForAccessibility(title.getText());
+    }
+
+    private void saveProgress() {
+        progress.edit().putString(SAVE, game.save()).putInt(INTERLUDE_INDEX, interludeIndex).apply();
     }
 
     private void addInfluence(BranchingGame.Choice influence) {

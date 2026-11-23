@@ -28,14 +28,27 @@ final class BranchingGame {
     }
 
     static BranchingGame restore(Story story, String saved) {
+        return restore(story, saved, false);
+    }
+
+    static BranchingGame restorePrevious(Story story, String saved) {
+        return restore(story, saved, true);
+    }
+
+    private static BranchingGame restore(Story story, String saved, boolean previousVersion) {
         BranchingGame game = start(story);
         for (String key : saved.split(",")) {
+            List<Choice> options = game.choices();
             Choice next = null;
-            for (Choice option : game.choices()) {
+            for (Choice option : options) {
                 if (option.saveId.equals(key)) {
                     next = option;
                     break;
                 }
+            }
+            // Updated branches can introduce a new scene at an existing decision.
+            if (next == null && previousVersion && !options.isEmpty() && key.matches("[a-z0-9_]+:[ab]")) {
+                next = options.get(key.endsWith(":a") ? 0 : 1);
             }
             if (next == null) {
                 break;
@@ -91,6 +104,10 @@ final class BranchingGame {
 
     Story.Art art() {
         return isEnding() ? ending.art : scene().art;
+    }
+
+    List<Story.Interlude> interludes() {
+        return history.isEmpty() ? Collections.emptyList() : history.get(history.size() - 1).interludes;
     }
 
     Set<Item> inventory() {
@@ -158,7 +175,8 @@ final class BranchingGame {
         REST, PRESSURE, FRIEND, QUIET, RUN, COOK, MUSIC, METRICS, RESTART,
         WORK, WRITE, SEARCH, CASH, DELEGATE, PILOT, EDITOR, APPLIED, OFFER,
         SOLD, NO_PLAN, STRAIN, OUT_OF_OFFICE, LOSING_FRIEND,
-        TEAM, AUTHOR, LEAVE, STAY, BOOK, STRETCH, COUNT, HOUSE, DISTANCE
+        TEAM, AUTHOR, LEAVE, STAY, BOOK, STRETCH, COUNT, HOUSE, DISTANCE,
+        SLIP, SAVED_NIGHT, REPORTED_DELAY, ROUTE_TEST, SAW_PATTERN
     }
 
     enum Item {
@@ -168,7 +186,8 @@ final class BranchingGame {
         GUITAR(Mark.GUITAR, "통기타", "준호가 오래 간직해 온 악기. 서랍에는 접힌 악보가 함께 있었다."),
         HANDOFF(Mark.HANDOFF, "인계 메모", "업무를 나눌 수 있도록 담당자와 남은 일정을 정리한 메모."),
         PORTFOLIO(Mark.PORTFOLIO, "포트폴리오", "준호가 맡았던 일과 함께 일한 사람을 기록한 문서."),
-        MANUSCRIPT(Mark.MANUSCRIPT, "원고 묶음", "열세 달 동안 써 온 글 가운데 다시 읽고 싶은 문장들을 모은 원고.");
+        MANUSCRIPT(Mark.MANUSCRIPT, "원고 묶음", "일 년 넘게 써 온 글 가운데 다시 읽고 싶은 문장들을 모은 원고."),
+        SLIP(Mark.SLIP, "야간 배송 전표", "배송 기사가 건넨 종이. 맨 아래 야간 연락처에 이준호라는 이름이 적혀 있다.");
 
         final Mark mark;
         final String name;
@@ -188,15 +207,20 @@ final class BranchingGame {
         final EnumSet<Mark> added;
         final EnumSet<Mark> removed;
         final int endingId;
+        final Story.Motion motion;
+        final List<Story.Interlude> interludes;
 
         Choice(String saveId, String label, String effect, EnumSet<Mark> added,
-               EnumSet<Mark> removed, int endingId) {
+               EnumSet<Mark> removed, int endingId, Story.Motion motion,
+               List<Story.Interlude> interludes) {
             this.saveId = saveId;
             this.label = label;
             this.effect = effect;
             this.added = added;
             this.removed = removed;
             this.endingId = endingId;
+            this.motion = motion;
+            this.interludes = interludes;
         }
     }
 }

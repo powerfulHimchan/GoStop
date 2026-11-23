@@ -1,13 +1,15 @@
 <resources>
     <string name="app_name">GoStop</string>
     <string name="ending_type">%1$s 엔딩</string>
-    <string name="chapter_progress">%1$d막 · 선택 %2$d / %3$d</string>
+    <string name="chapter">%1$d막</string>
+    <string name="continue_story">계속</string>
     <string name="ending_choices">이 결말에 영향을 준 선택</string>
     <string name="replay">갈림길에서 다시</string>
     <string name="restart">처음부터 다시</string>
     <string name="inventory">소지품</string>
     <string name="inventory_count">소지품 (%1$d)</string>
     <string name="inventory_empty">아직 소지품이 없다.</string>
+    <string name="inventory_hint">아이콘을 누르면 설명을 볼 수 있어.</string>
     <string name="item_acquired">%1$s 획득</string>
     <string name="close">닫기</string>
     <string-array name="story_acts">
