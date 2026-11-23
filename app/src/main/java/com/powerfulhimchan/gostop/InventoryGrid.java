@@ -24,7 +24,7 @@ final class InventoryGrid extends GridLayout {
 
     private ItemListener listener;
 
-    InventoryGrid(Context context, Set<BranchingGame.Item> items) {
+    InventoryGrid(Context context, Set<BranchingGame.Item> items, boolean legacy) {
         super(context);
         setRowCount(SIZE);
         setColumnCount(SIZE);
@@ -33,7 +33,7 @@ final class InventoryGrid extends GridLayout {
         int index = 0;
         for (BranchingGame.Item item : items) {
             ImageButton button = new ImageButton(context);
-            button.setContentDescription(item.name);
+            button.setContentDescription(item.displayName(legacy));
             button.setScaleType(ImageView.ScaleType.FIT_CENTER);
             int inset = dp(4);
             button.setPadding(inset, inset, inset, inset);

@@ -190,8 +190,8 @@ final class BranchingGame {
         HANDOFF(Mark.HANDOFF, "인계 메모", "업무를 나눌 수 있도록 담당자와 남은 일정을 정리한 메모."),
         PORTFOLIO(Mark.PORTFOLIO, "포트폴리오", "준호가 맡았던 일과 함께 일한 사람을 기록한 문서."),
         MANUSCRIPT(Mark.MANUSCRIPT, "원고 묶음", "일 년 넘게 써 온 글 가운데 다시 읽고 싶은 문장들을 모은 원고."),
-        SLIP(Mark.SLIP, "야간 배송 전표", "배송 기사가 건넨 종이. 맨 아래 야간 연락처에 이준호라는 이름이 적혀 있다."),
-        JOB_LETTER(Mark.JOB_LETTER, "서면 채용 제안서", "부산 팀이 제시한 입사일과 업무를 적은 종이. 채용이 미뤄졌을 때 원래 조건을 확인할 수 있다.");
+        SLIP(Mark.SLIP, "첫 교정지", "인쇄 전에 확인하려고 뽑은 종이. 작가가 고친 문장 옆에 준호의 개인 번호와 ‘이번 주만’이라는 메모가 남아 있다."),
+        JOB_LETTER(Mark.JOB_LETTER, "서면 채용 제안서", "부산의 지역 출판사가 제안한 입사일과 편집 업무를 적은 종이. 채용이 미뤄졌을 때 원래 조건을 확인할 수 있다.");
 
         final Mark mark;
         final String name;
@@ -201,6 +201,16 @@ final class BranchingGame {
             this.mark = mark;
             this.name = name;
             this.description = description;
+        }
+
+        String displayName(boolean legacy) {
+            return legacy && this == SLIP ? "야간 배송 전표" : name;
+        }
+
+        String displayDescription(boolean legacy) {
+            return legacy && this == SLIP
+                    ? "배송 기사가 건넨 종이. 맨 아래 야간 연락처에 이준호라는 이름이 적혀 있다."
+                    : description;
         }
     }
 

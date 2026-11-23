@@ -255,7 +255,8 @@ public final class MainActivity extends Activity {
     }
 
     private void showScene() {
-        newStoryButton.setVisibility(LEGACY_STORY.equals(edition) ? View.VISIBLE : View.GONE);
+        boolean legacy = LEGACY_STORY.equals(edition);
+        newStoryButton.setVisibility(legacy ? View.VISIBLE : View.GONE);
         Story.Interlude interlude = interludeIndex < 0 ? null : game.interludes().get(interludeIndex);
         artwork.show(interlude == null ? game.art() : interlude.art);
         title.setText(interlude == null ? game.title() : interlude.title);
@@ -263,9 +264,10 @@ public final class MainActivity extends Activity {
         SpannableStringBuilder body = new SpannableStringBuilder(narrative);
         Set<BranchingGame.Item> inventory = game.inventory();
         for (BranchingGame.Item item : inventory) {
-            int start = narrative.indexOf(item.name);
+            String itemName = item.displayName(legacy);
+            int start = narrative.indexOf(itemName);
             if (start >= 0) {
-                int end = start + item.name.length();
+                int end = start + itemName.length();
                 body.setSpan(new StyleSpan(Typeface.BOLD), start, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
                 body.setSpan(new ForegroundColorSpan(BRICK), start, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
             }
@@ -310,7 +312,8 @@ public final class MainActivity extends Activity {
                 hasInterludes ? choice.interludes.get(0).motion : choice.motion);
         for (BranchingGame.Item item : next.inventory()) {
             if (!previousItems.contains(item)) {
-                Toast.makeText(this, getString(R.string.item_acquired, item.name), Toast.LENGTH_SHORT).show();
+                String name = item.displayName(LEGACY_STORY.equals(edition));
+                Toast.makeText(this, getString(R.string.item_acquired, name), Toast.LENGTH_SHORT).show();
             }
         }
     }
@@ -403,7 +406,8 @@ public final class MainActivity extends Activity {
         LinearLayout contents = column();
         contents.setPadding(dp(16), dp(4), dp(16), dp(12));
         Set<BranchingGame.Item> items = game.inventory();
-        InventoryGrid grid = new InventoryGrid(this, items);
+        boolean legacy = LEGACY_STORY.equals(edition);
+        InventoryGrid grid = new InventoryGrid(this, items, legacy);
         add(contents, grid, 0);
         TextView itemName = text(17, INK, true);
         itemName.setVisibility(View.GONE);
@@ -415,15 +419,17 @@ public final class MainActivity extends Activity {
         ScrollView inventoryScroll = new ScrollView(this);
         inventoryScroll.addView(contents);
         grid.setOnItemSelected(item -> {
-            itemName.setText(item.name);
+            String name = item.displayName(legacy);
+            String detail = item.displayDescription(legacy);
+            itemName.setText(name);
             itemName.setVisibility(View.VISIBLE);
-            itemDescription.setText(item.description);
+            itemDescription.setText(detail);
             itemDescription.post(() -> {
                 itemDescription.requestRectangleOnScreen(
                         new android.graphics.Rect(0, 0, itemDescription.getWidth(),
                                 itemDescription.getHeight()));
             });
-            itemDescription.announceForAccessibility(item.name + ". " + item.description);
+            itemDescription.announceForAccessibility(name + ". " + detail);
         });
         inventoryDialog = new AlertDialog.Builder(this)
                 .setCustomTitle(heading)

@@ -21,6 +21,7 @@ final class SceneArt extends View {
     private final RectF bounds = new RectF();
     private final Paint paint = new Paint();
     private final SceneAmbience ambience = new SceneAmbience();
+    private final ChaseRunners runners = new ChaseRunners();
     private final Rect visible = new Rect();
     private final Runnable ambientFrame = this::advanceAmbience;
     private Bitmap illustration;
@@ -62,6 +63,12 @@ final class SceneArt extends View {
                 case PRINTSHOP -> R.drawable.story_printshop;
                 case MARKET -> R.drawable.story_market;
                 case VAN -> R.drawable.story_van;
+                case CHASE -> R.drawable.story_chase;
+                case STORE_MEET -> R.drawable.story_store_meet;
+                case PUBLISHER -> R.drawable.story_publisher;
+                case PRESS -> R.drawable.story_press;
+                case BUSAN_PUBLISHER -> R.drawable.story_busan_publisher;
+                case PROOFS -> R.drawable.story_proofs;
             };
             next = BitmapFactory.decodeResource(getResources(), resource);
             illustrations.put(art, next);
@@ -196,9 +203,13 @@ final class SceneArt extends View {
 
     private void drawIllustration(Canvas canvas) {
         canvas.drawBitmap(illustration, null, bounds, null);
-        if (shouldAnimate()) {
-            ambience.draw(canvas, bounds, currentArt,
-                    (SystemClock.uptimeMillis() - atmosphereStarted) / 1000f);
+        boolean animate = shouldAnimate();
+        float seconds = animate ? (SystemClock.uptimeMillis() - atmosphereStarted) / 1000f : 0f;
+        if (currentArt == Story.Art.CHASE) {
+            runners.draw(canvas, bounds, seconds);
+        }
+        if (animate) {
+            ambience.draw(canvas, bounds, currentArt, seconds);
         }
     }
 

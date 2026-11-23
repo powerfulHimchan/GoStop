@@ -18,7 +18,7 @@ final class SceneAmbience {
         canvas.translate(bounds.left, bounds.top);
         canvas.scale(bounds.width() / WIDTH, bounds.height() / HEIGHT);
         switch (art) {
-            case ALLEY -> {
+            case ALLEY, CHASE -> {
                 rain(canvas, seconds, 0, 240, 4, 145, 30);
                 shimmer(canvas, seconds, 147, 122, 77, 35, 9, WATER);
                 glow(canvas, seconds, 8, 43, 61, 5, WARM);
@@ -27,7 +27,7 @@ final class SceneAmbience {
                 rain(canvas, seconds, 0, 240, 0, 153, 19);
                 shimmer(canvas, seconds, 5, 123, 215, 35, 17, WARM);
             }
-            case DEPOT -> {
+            case DEPOT, PRESS -> {
                 rain(canvas, seconds, 20, 240, 3, 154, 24);
                 shimmer(canvas, seconds, 20, 123, 217, 30, 15, WARM);
             }
@@ -45,7 +45,7 @@ final class SceneAmbience {
                 steam(canvas, seconds, 111, 110, 10);
                 dust(canvas, seconds, 12, 32, 90, 73, 10, WARM);
             }
-            case OFFICE -> {
+            case OFFICE, PUBLISHER -> {
                 glow(canvas, seconds, 180, 94, 41, 8, WATER);
                 shimmer(canvas, seconds, 174, 93, 51, 23, 7, WATER);
             }
@@ -63,6 +63,12 @@ final class SceneAmbience {
                 glow(canvas, seconds, 184, 29, 48, 13, WARM);
             }
             case BOOKSHOP -> dust(canvas, seconds, 75, 13, 134, 91, 17, WARM);
+            case STORE_MEET -> {
+                rain(canvas, seconds, 122, 240, 0, 142, 16);
+                shimmer(canvas, seconds, 5, 120, 225, 35, 13, WATER);
+            }
+            case BUSAN_PUBLISHER -> dust(canvas, seconds, 86, 27, 122, 97, 16, WARM);
+            case PROOFS -> dust(canvas, seconds, 12, 15, 215, 113, 14, WARM);
             case PRINTSHOP -> {
                 dust(canvas, seconds, 86, 25, 144, 99, 17, WARM);
                 shimmer(canvas, seconds, 105, 110, 125, 31, 11, WARM);
