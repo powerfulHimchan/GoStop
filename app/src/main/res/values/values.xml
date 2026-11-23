@@ -2,6 +2,11 @@
     <string name="app_name">GoStop</string>
     <string name="ending_type">%1$s 엔딩</string>
     <string name="chapter">%1$d막</string>
+    <string name="act_end">%1$d막 끝</string>
+    <string name="intro_description">서른세 살 출판 편집자, 이준호.\n늦은 밤, 출판사를 나와 골목에 들어선다.\n뒤에서 누군가 그의 이름을 부른다.</string>
+    <string name="start_story">시작하기</string>
+    <string name="next_act">다음 막으로</string>
+    <string name="view_ending">엔딩 보기</string>
     <string name="continue_story">계속</string>
     <string name="ending_choices">이 결말에 영향을 준 선택</string>
     <string name="replay">갈림길에서 다시</string>
@@ -20,7 +25,7 @@
     <string name="new_story_message">새 이야기의 첫 장면으로 이동할까? 모아둔 엔딩은 남아 있어.</string>
     <string-array name="story_acts">
         <item>1막 · 쫓기는 밤</item>
-        <item>2막 · 첫 갈림길을 향해</item>
+        <item>2막 · 내 시간 만들기</item>
         <item>3막 · 선택한 곳에서</item>
         <item>4막 · 두 번째 갈림길</item>
         <item>5막 · 내가 지킬 것</item>

@@ -40,11 +40,13 @@ public final class MainActivity extends Activity {
     private static final String PREVIOUS_SAVE = "choices_v2";
     private static final String STORY_EDITION = "story_edition";
     private static final String STORY_REVISION = "story_revision";
-    private static final int CURRENT_STORY_REVISION = 1;
+    private static final int DINNER_RESULT_REVISION = 2;
+    private static final int CURRENT_STORY_REVISION = DINNER_RESULT_REVISION;
     private static final String NEW_STORY = "branches";
     private static final String LEGACY_STORY = "dispatch";
     private static final String ENDING_PREFIX = "seen_ending_";
     private static final String INTERLUDE_INDEX = "interlude_index";
+    private static final String PAGE_KEY = "story_page";
     private static final String INVENTORY_OPEN = "inventory_open";
     private static final int PAPER = 0xFFF6EAD5;
     private static final int BUTTON_PAPER = 0xFFF9ECD7;
@@ -57,10 +59,15 @@ public final class MainActivity extends Activity {
     private String edition;
     private BranchingGame game;
     private int interludeIndex = -1;
+    private Page page = Page.STORY;
     private Typeface regular;
     private Typeface bold;
     private ScrollView scroll;
+    private LinearLayout bodyLayout;
+    private LinearLayout storyText;
+    private View storySeam;
     private SceneArt artwork;
+    private TextView brand;
     private TextView phase;
     private TextView title;
     private TextView description;
@@ -79,28 +86,47 @@ public final class MainActivity extends Activity {
         String oldSave = progress.getString(SAVE, progress.getString(PREVIOUS_SAVE, ""));
         edition = progress.getString(STORY_EDITION, oldSave.isEmpty() ? NEW_STORY : LEGACY_STORY);
         story = loadStory(edition);
+        int revision = progress.getInt(STORY_REVISION, 0);
         if (progress.contains(SAVE)) {
-            boolean migrate = NEW_STORY.equals(edition)
-                    && progress.getInt(STORY_REVISION, 0) < CURRENT_STORY_REVISION;
+            boolean migrate = NEW_STORY.equals(edition) && revision < CURRENT_STORY_REVISION;
             game = migrate ? BranchingGame.restorePrevious(story, oldSave)
                     : BranchingGame.restore(story, oldSave);
             int savedInterlude = progress.getInt(INTERLUDE_INDEX, -1);
+            // The existing morning scene now follows the previous night's choice result.
+            if (migrate && revision < DINNER_RESULT_REVISION && game.decisionNumber() == 10
+                    && savedInterlude == 0 && game.interludes().size() == 2) {
+                savedInterlude = 1;
+            }
             if (savedInterlude >= 0 && savedInterlude < game.interludes().size()) {
                 interludeIndex = savedInterlude;
             }
-            if (migrate) {
-                saveProgress();
-            }
         } else {
-            game = BranchingGame.restorePrevious(story, progress.getString(PREVIOUS_SAVE, ""));
-            saveProgress();
+            game = BranchingGame.restorePrevious(story, oldSave);
         }
-        recordEnding(progress.edit()).apply();
+        page = restorePage(progress.getString(PAGE_KEY,
+                oldSave.isEmpty() ? Page.INTRO.name() : Page.STORY.name()));
+        saveProgress();
         buildLayout();
         showScene();
         if (savedInstanceState != null && savedInstanceState.getBoolean(INVENTORY_OPEN)) {
             showInventory();
         }
+    }
+
+    private Page restorePage(String savedPage) {
+        if (interludeIndex < 0) {
+            if (Page.INTRO.name().equals(savedPage) && game.decisionNumber() == 1) {
+                return Page.INTRO;
+            }
+            if (Page.ACT_START.name().equals(savedPage) && !game.isEnding()
+                    && (game.decisionNumber() == 1 || game.hasCompletedAct())) {
+                return Page.ACT_START;
+            }
+            if (Page.ACT_END.name().equals(savedPage) && game.hasCompletedAct()) {
+                return Page.ACT_END;
+            }
+        }
+        return Page.STORY;
     }
 
     private InputStreamReader storyFile(String name) throws IOException {
@@ -175,7 +201,7 @@ public final class MainActivity extends Activity {
 
         LinearLayout header = new LinearLayout(this);
         header.setGravity(Gravity.CENTER_VERTICAL);
-        TextView brand = text(25, INK, true);
+        brand = text(25, INK, true);
         brand.setText(R.string.app_name);
         header.addView(brand, new LinearLayout.LayoutParams(0, -2, 1));
         Button endingsButton = headerButton();
@@ -192,9 +218,9 @@ public final class MainActivity extends Activity {
         scroll = new ScrollView(this);
         scroll.setFillViewport(true);
         content.addView(scroll, new LinearLayout.LayoutParams(-1, 0, 1));
-        LinearLayout body = column();
-        body.setPadding(0, 0, 0, dp(12));
-        scroll.addView(body);
+        bodyLayout = column();
+        bodyLayout.setPadding(0, 0, 0, dp(12));
+        scroll.addView(bodyLayout);
         newStoryButton = headerButton();
         newStoryButton.setText(R.string.new_story);
         newStoryButton.setOnClickListener(view -> new AlertDialog.Builder(this)
@@ -202,7 +228,7 @@ public final class MainActivity extends Activity {
                 .setNegativeButton(R.string.close, null)
                 .setPositiveButton(R.string.new_story, (dialog, which) -> startNewStory())
                 .show());
-        add(body, newStoryButton, 8);
+        add(bodyLayout, newStoryButton, 8);
 
         FrameLayout picture = new FrameLayout(this);
         picture.setBackground(paper(PAPER));
@@ -213,31 +239,30 @@ public final class MainActivity extends Activity {
         picture.addView(artwork, new FrameLayout.LayoutParams(-1, -2));
         LinearLayout.LayoutParams photoParams = new LinearLayout.LayoutParams(-1, -2);
         photoParams.setMargins(dp(3), dp(14), dp(3), 0);
-        body.addView(picture, photoParams);
+        bodyLayout.addView(picture, photoParams);
 
         FrameLayout storyCard = new FrameLayout(this);
         storyCard.setBackground(paper(PAPER));
         storyCard.setElevation(dp(2));
-        LinearLayout story = column();
-        story.setPadding(dp(22), dp(12), dp(14), dp(14));
+        storyText = column();
         phase = text(13, BRICK, true);
-        add(story, phase, 0);
+        add(storyText, phase, 0);
         title = text(24, INK, true);
         if (Build.VERSION.SDK_INT >= 28) {
             title.setAccessibilityHeading(true);
         }
-        add(story, title, 3);
+        add(storyText, title, 3);
         description = text(18, INK, false);
         description.setLineSpacing(dp(6), 1);
-        add(story, description, 8);
-        storyCard.addView(story, new FrameLayout.LayoutParams(-1, -2));
-        View seam = new View(this);
+        add(storyText, description, 8);
+        storyCard.addView(storyText, new FrameLayout.LayoutParams(-1, -2));
+        storySeam = new View(this);
         GradientDrawable seamLine = new GradientDrawable();
         seamLine.setStroke(dp(1), BORDER, dp(2), dp(2));
-        seam.setBackground(seamLine);
+        storySeam.setBackground(seamLine);
         FrameLayout.LayoutParams seamParams = new FrameLayout.LayoutParams(dp(1), -1, Gravity.START);
         seamParams.setMargins(dp(10), dp(12), 0, dp(12));
-        storyCard.addView(seam, seamParams);
+        storyCard.addView(storySeam, seamParams);
         ImageView bookmark = new ImageView(this);
         bookmark.setImageResource(R.drawable.journal_bookmark);
         bookmark.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
@@ -245,10 +270,10 @@ public final class MainActivity extends Activity {
                 dp(14), dp(23), Gravity.TOP | Gravity.END);
         bookmarkParams.setMarginEnd(dp(17));
         storyCard.addView(bookmark, bookmarkParams);
-        add(body, storyCard, 14);
+        add(bodyLayout, storyCard, 14);
 
         influences = column();
-        add(body, influences, 12);
+        add(bodyLayout, influences, 12);
 
         LinearLayout footer = column();
         footer.setPadding(0, dp(4), 0, dp(10));
@@ -264,13 +289,30 @@ public final class MainActivity extends Activity {
 
     private void showScene() {
         boolean legacy = LEGACY_STORY.equals(edition);
-        newStoryButton.setVisibility(legacy ? View.VISIBLE : View.GONE);
+        boolean storyPage = page == Page.STORY;
+        Set<BranchingGame.Item> inventory = game.inventory();
+        inventoryButton.setText(getString(R.string.inventory_count, inventory.size()));
+        newStoryButton.setVisibility(legacy && storyPage ? View.VISIBLE : View.GONE);
+        brand.setVisibility(page == Page.INTRO ? View.INVISIBLE : View.VISIBLE);
+        bodyLayout.setGravity(storyPage ? Gravity.TOP : Gravity.CENTER_VERTICAL);
+        storySeam.setVisibility(storyPage ? View.VISIBLE : View.GONE);
+        storyText.setPadding(dp(22), dp(storyPage ? 12 : 24), dp(storyPage ? 14 : 22),
+                dp(storyPage ? 14 : 24));
+        title.setTextSize(storyPage ? 24 : 30);
+        title.setGravity(storyPage ? Gravity.START : Gravity.CENTER);
+        description.setGravity(storyPage ? Gravity.START : Gravity.CENTER);
+        phase.setVisibility(storyPage ? View.VISIBLE : View.GONE);
+        description.setVisibility(storyPage || page == Page.INTRO ? View.VISIBLE : View.GONE);
+        influences.removeAllViews();
+        if (!storyPage) {
+            showTitlePage();
+            return;
+        }
         Story.Interlude interlude = interludeIndex < 0 ? null : game.interludes().get(interludeIndex);
         artwork.show(interlude == null ? game.art() : interlude.art);
         title.setText(interlude == null ? game.title() : interlude.title);
         String narrative = interlude == null ? game.description() : interlude.description;
         SpannableStringBuilder body = new SpannableStringBuilder(narrative);
-        Set<BranchingGame.Item> inventory = game.inventory();
         for (BranchingGame.Item item : inventory) {
             String itemName = item.displayName(legacy);
             int start = narrative.indexOf(itemName);
@@ -281,8 +323,6 @@ public final class MainActivity extends Activity {
             }
         }
         description.setText(body);
-        inventoryButton.setText(getString(R.string.inventory_count, inventory.size()));
-        influences.removeAllViews();
         buttons[1].setVisibility(interlude == null ? View.VISIBLE : View.GONE);
         if (interlude != null) {
             int act = (game.decisionNumber() - 2) / BranchingGame.DECISIONS_PER_ACT + 1;
@@ -312,13 +352,61 @@ public final class MainActivity extends Activity {
         }
     }
 
+    private int actTitles() {
+        return LEGACY_STORY.equals(edition) ? R.array.legacy_acts : R.array.story_acts;
+    }
+
+    private void showTitlePage() {
+        buttons[1].setVisibility(View.GONE);
+        buttons[1].setOnClickListener(null);
+        switch (page) {
+            case INTRO -> {
+                artwork.show(Story.Art.DESK);
+                title.setText(R.string.app_name);
+                description.setText(R.string.intro_description);
+                buttons[0].setText(R.string.start_story);
+                buttons[0].setOnClickListener(view -> changeGame(game, -1, Page.ACT_START, null));
+            }
+            case ACT_START -> {
+                int act = game.act();
+                artwork.show(actArt(act));
+                title.setText(getResources().getStringArray(actTitles())[act - 1]);
+                buttons[0].setText(R.string.continue_story);
+                buttons[0].setOnClickListener(view -> changeGame(game, -1, Page.STORY, null));
+            }
+            case ACT_END -> {
+                int act = game.act() - 1;
+                artwork.show(actArt(act));
+                title.setText(getString(R.string.act_end, act));
+                boolean ending = game.isEnding();
+                buttons[0].setText(ending ? R.string.view_ending : R.string.next_act);
+                buttons[0].setOnClickListener(view ->
+                        changeGame(game, -1, ending ? Page.STORY : Page.ACT_START, null));
+            }
+            case STORY -> throw new IllegalStateException("Story is not a title page");
+        }
+    }
+
+    private Story.Art actArt(int act) {
+        return switch (act) {
+            case 1 -> Story.Art.CHASE_STILL;
+            case 2 -> Story.Art.WALK;
+            case 3 -> Story.Art.CAFE;
+            case 4 -> Story.Art.DESK;
+            default -> Story.Art.RIVER;
+        };
+    }
+
     private void selectChoice(BranchingGame.Choice choice) {
         Set<BranchingGame.Item> previousItems = game.inventory();
         BranchingGame next = game.choose(choice);
         List<Story.Interlude> interludes = next.interludes();
         boolean hasInterludes = !interludes.isEmpty();
-        changeGame(next, hasInterludes ? 0 : -1,
-                hasInterludes ? interludes.get(0).motion : choice.motion);
+        if (hasInterludes) {
+            changeGame(next, 0, Page.STORY, interludes.get(0).motion);
+        } else {
+            finishChoice(next, choice.motion);
+        }
         for (BranchingGame.Item item : next.inventory()) {
             if (!previousItems.contains(item)) {
                 String name = item.displayName(LEGACY_STORY.equals(edition));
@@ -331,17 +419,25 @@ public final class MainActivity extends Activity {
         int nextIndex = interludeIndex + 1;
         List<Story.Interlude> interludes = game.interludes();
         if (nextIndex < interludes.size()) {
-            changeGame(game, nextIndex, interludes.get(nextIndex).motion);
+            changeGame(game, nextIndex, Page.STORY, interludes.get(nextIndex).motion);
         } else {
-            changeGame(game, -1, Story.Motion.STOP);
+            finishChoice(game, Story.Motion.STOP);
+        }
+    }
+
+    private void finishChoice(BranchingGame next, Story.Motion motion) {
+        if (next.hasCompletedAct()) {
+            changeGame(next, -1, Page.ACT_END, null);
+        } else {
+            changeGame(next, -1, Page.STORY, motion);
         }
     }
 
     private void showReplay() {
         new AlertDialog.Builder(this)
                 .setTitle(R.string.replay)
-                .setItems(LEGACY_STORY.equals(edition) ? R.array.legacy_acts : R.array.story_acts,
-                        (dialog, index) -> changeGame(game.replayAct(index + 1), -1, null))
+                .setItems(actTitles(),
+                        (dialog, index) -> changeGame(game.replayAct(index + 1), -1, Page.ACT_START, null))
                 .setNegativeButton(R.string.close, null)
                 .show();
     }
@@ -351,7 +447,7 @@ public final class MainActivity extends Activity {
             edition = NEW_STORY;
             story = loadStory(edition);
         }
-        changeGame(BranchingGame.start(story), -1, null);
+        changeGame(BranchingGame.start(story), -1, Page.INTRO, null);
     }
 
     private void showEndingArchive() {
@@ -451,9 +547,10 @@ public final class MainActivity extends Activity {
         close.setTextColor(BRICK);
     }
 
-    private void changeGame(BranchingGame next, int nextInterlude, Story.Motion motion) {
+    private void changeGame(BranchingGame next, int nextInterlude, Page nextPage, Story.Motion motion) {
         game = next;
         interludeIndex = nextInterlude;
+        page = nextPage;
         saveProgress();
         showScene();
         if (motion != null) {
@@ -466,18 +563,23 @@ public final class MainActivity extends Activity {
     private void saveProgress() {
         SharedPreferences.Editor editor = progress.edit().putString(SAVE, game.save())
                 .putInt(INTERLUDE_INDEX, interludeIndex).putString(STORY_EDITION, edition)
+                .putString(PAGE_KEY, page.name())
                 .putInt(STORY_REVISION, CURRENT_STORY_REVISION);
         recordEnding(editor).apply();
     }
 
     private SharedPreferences.Editor recordEnding(SharedPreferences.Editor editor) {
-        if (game.isEnding() && interludeIndex < 0) {
+        if (page == Page.STORY && game.isEnding() && interludeIndex < 0) {
             Story.Ending ending = game.ending();
             String key = ENDING_PREFIX + edition + "_" + ending.id;
             editor.putString(key, new EndingRecord(ending.title, ending.category,
                     ending.art, game.description()).encode());
         }
         return editor;
+    }
+
+    private enum Page {
+        INTRO, ACT_START, STORY, ACT_END
     }
 
     private static final class EndingRecord {

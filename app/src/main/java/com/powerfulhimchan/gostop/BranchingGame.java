@@ -78,6 +78,10 @@ final class BranchingGame {
         return (decisionNumber() - 1) / DECISIONS_PER_ACT + 1;
     }
 
+    boolean hasCompletedAct() {
+        return !history.isEmpty() && history.size() % DECISIONS_PER_ACT == 0;
+    }
+
     boolean isEnding() {
         return ending != null;
     }
