@@ -108,6 +108,7 @@ public final class MainActivity extends Activity {
             }
             return insets;
         });
+        setContentView(root);
         if (Build.VERSION.SDK_INT >= 26 && Build.VERSION.SDK_INT < 35) {
             getWindow().setNavigationBarColor(getColor(R.color.journal_background));
         }
@@ -126,8 +127,6 @@ public final class MainActivity extends Activity {
                             | View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR
                             | (Build.VERSION.SDK_INT >= 26 ? View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR : 0));
         }
-        setContentView(root);
-
         LinearLayout content = column();
         content.setPadding(dp(16), 0, dp(16), 0);
         FrameLayout.LayoutParams contentParams = new FrameLayout.LayoutParams(
