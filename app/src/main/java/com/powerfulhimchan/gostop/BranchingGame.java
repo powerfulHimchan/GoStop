@@ -107,7 +107,7 @@ final class BranchingGame {
     }
 
     Story.Art art() {
-        return isEnding() ? ending.art : scene().art;
+        return isEnding() ? ending.illustration(marks) : scene().art;
     }
 
     List<Story.Interlude> interludes() {
