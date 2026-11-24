@@ -41,7 +41,7 @@ public final class MainActivity extends Activity {
     private static final String STORY_EDITION = "story_edition";
     private static final String STORY_REVISION = "story_revision";
     private static final int DINNER_RESULT_REVISION = 2;
-    private static final int CURRENT_STORY_REVISION = DINNER_RESULT_REVISION;
+    private static final int CURRENT_STORY_REVISION = 3;
     private static final String NEW_STORY = "branches";
     private static final String LEGACY_STORY = "dispatch";
     private static final String ENDING_PREFIX = "seen_ending_";

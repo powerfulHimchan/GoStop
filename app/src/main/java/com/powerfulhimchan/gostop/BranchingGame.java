@@ -193,7 +193,9 @@ final class BranchingGame {
         FOLLOW_RECORD, FOLLOW_LIFE, PATH_COMPANY, PATH_BOOK, PATH_BUSAN, PATH_LOCAL,
         COMPANY_SHARED, COMPANY_ALONE, BOOK_TOGETHER, BOOK_DEADLINE, BUSAN_STAY, BUSAN_OTHER,
         LOCAL_PRESENT, LOCAL_MISSED, JOB_LETTER, LOCAL_JOB, TRUST, KEEP_DAY, PROJECT_LEFT, REGRET,
-        SLEPT_LATE, PROOF_PHOTO, THANKED_TAESIK, LONG_WALK, PACKED_LUNCH, EARLY_DINNER
+        SLEPT_LATE, PROOF_PHOTO, THANKED_TAESIK, LONG_WALK, PACKED_LUNCH, EARLY_DINNER,
+        ANSWERED_PROOF, RENT_RESERVE, SENT_CORRECTION, READ_NOTE, WEEKEND_COVER, OFFERED_VISIT,
+        TESTED_OTHER_TEAM
     }
 
     enum Item {
@@ -203,8 +205,8 @@ final class BranchingGame {
         GUITAR(Mark.GUITAR, "통기타", "준호가 오래 간직해 온 악기. 서랍에는 접힌 악보가 함께 있었다."),
         HANDOFF(Mark.HANDOFF, "인계 메모", "업무를 나눌 수 있도록 담당자와 남은 일정을 정리한 메모."),
         PORTFOLIO(Mark.PORTFOLIO, "포트폴리오", "준호가 맡았던 일과 함께 일한 사람을 기록한 문서."),
-        MANUSCRIPT(Mark.MANUSCRIPT, "원고 묶음", "일 년 넘게 써 온 글 가운데 다시 읽고 싶은 문장들을 모은 원고."),
-        SLIP(Mark.SLIP, "첫 교정지", "인쇄 전에 확인한 첫 교정 기록. 작가가 고친 문장 옆에 준호의 개인 번호와 ‘이번 주만’이라는 메모가 남아 있다."),
+        MANUSCRIPT(Mark.MANUSCRIPT, "원고 묶음", "자기 이름으로 쓰는 글의 초안과 고쳐 쓴 페이지를 모은 원고."),
+        SLIP(Mark.SLIP, "첫 교정지", "인쇄 전에 확인한 첫 교정 기록. 종이나 사진으로 간직한 기록 구석에 준호의 개인 번호가 남아 있다."),
         JOB_LETTER(Mark.JOB_LETTER, "서면 채용 제안서", "부산의 지역 출판사가 제안한 입사일과 편집 업무를 적은 종이. 채용이 미뤄졌을 때 원래 조건을 확인할 수 있다.");
 
         final Mark mark;
