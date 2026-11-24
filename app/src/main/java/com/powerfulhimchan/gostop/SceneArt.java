@@ -64,6 +64,7 @@ final class SceneArt extends View {
                 case MARKET -> R.drawable.story_market;
                 case VAN -> R.drawable.story_van;
                 case CHASE -> R.drawable.story_chase;
+                case ALLEY_EXIT -> R.drawable.story_alley_exit;
                 case CHASE_STILL -> R.drawable.story_chase_still;
                 case STORE_MEET -> R.drawable.story_store_meet;
                 case PUBLISHER -> R.drawable.story_publisher;
@@ -80,7 +81,7 @@ final class SceneArt extends View {
     }
 
     void play(Story.Motion nextMotion) {
-        if (currentArt == Story.Art.CHASE_STILL) {
+        if (isStillScene()) {
             return;
         }
         motion = nextMotion;
@@ -125,8 +126,12 @@ final class SceneArt extends View {
         updateAmbience();
     }
 
+    private boolean isStillScene() {
+        return currentArt == Story.Art.CHASE_STILL || currentArt == Story.Art.ALLEY_EXIT;
+    }
+
     private boolean shouldAnimate() {
-        return currentArt != null && currentArt != Story.Art.CHASE_STILL
+        return currentArt != null && !isStillScene()
                 && isAttachedToWindow() && getWindowVisibility() == VISIBLE
                 && hasWindowFocus() && (Build.VERSION.SDK_INT < 26 || ValueAnimator.areAnimatorsEnabled());
     }
