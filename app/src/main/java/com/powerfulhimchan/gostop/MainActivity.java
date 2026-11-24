@@ -70,6 +70,7 @@ public final class MainActivity extends Activity {
     private TextView brand;
     private TextView phase;
     private TextView title;
+    private TextView subtitle;
     private TextView description;
     private Button inventoryButton;
     private Button newStoryButton;
@@ -252,6 +253,10 @@ public final class MainActivity extends Activity {
             title.setAccessibilityHeading(true);
         }
         add(storyText, title, 3);
+        subtitle = text(16, BRICK, false);
+        subtitle.setText(R.string.intro_subtitle);
+        subtitle.setGravity(Gravity.CENTER);
+        add(storyText, subtitle, 4);
         description = text(18, INK, false);
         description.setLineSpacing(dp(6), 1);
         add(storyText, description, 8);
@@ -301,6 +306,7 @@ public final class MainActivity extends Activity {
         title.setTextSize(storyPage ? 24 : 30);
         title.setGravity(storyPage ? Gravity.START : Gravity.CENTER);
         description.setGravity(storyPage ? Gravity.START : Gravity.CENTER);
+        subtitle.setVisibility(page == Page.INTRO ? View.VISIBLE : View.GONE);
         phase.setVisibility(storyPage ? View.VISIBLE : View.GONE);
         description.setVisibility(storyPage || page == Page.INTRO ? View.VISIBLE : View.GONE);
         influences.removeAllViews();

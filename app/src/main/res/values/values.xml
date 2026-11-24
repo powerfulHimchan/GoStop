@@ -1,5 +1,7 @@
 <resources>
-    <string name="app_name">GoStop</string>
+    <string name="app_name">오늘의 여백</string>
+    <string name="intro_subtitle">내일도 달릴 수 있게</string>
+    <color name="icon_teal">#19454A</color>
     <string name="ending_type">%1$s 엔딩</string>
     <string name="chapter">%1$d막</string>
     <string name="act_end">%1$d막 끝</string>

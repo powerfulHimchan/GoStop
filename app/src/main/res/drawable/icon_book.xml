@@ -1,0 +1,16 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="48dp" android:height="48dp"
+    android:viewportWidth="64" android:viewportHeight="64">
+    <!-- Cloth binding and the stepped edges of the page block. -->
+    <path android:fillColor="#102D31" android:pathData="M6,22H10V18H28V20H36V18H54V22H58V32H60V47H56V49H37V51H27V49H8V47H4V35H6Z" />
+    <path android:fillColor="#845333" android:pathData="M8,21H29V23H35V21H56V34H58V45H54V47H36V49H28V47H10V45H6V35H8Z" />
+    <path android:fillColor="#CC9E69" android:pathData="M9,20H27V22H37V20H55V34H57V43H53V45H36V47H28V45H11V43H7V35H9Z" />
+    <!-- Separate leaves leave a deep central crease at launcher size. -->
+    <path android:fillColor="#F3DCA5" android:pathData="M10,18H14V16H24V17H28V18H31V20H33V44H30V43H26V42H20V41H13V42H8V35H9V27H10Z" />
+    <path android:fillColor="#FFEDBF" android:pathData="M13,18H23V19H28V20H30V39H26V38H19V37H11V29H12V21H13Z" />
+    <path android:fillColor="#FFF0C6" android:pathData="M33,20H36V18H40V17H45V16H51V17H54V23H55V31H56V41H50V40H44V41H39V42H35V44H33Z" />
+    <path android:fillColor="#C29B63" android:pathData="M31,20H33V43H35V45H31Z" />
+    <path android:fillColor="#715B44" android:pathData="M15,23H23V24H27V26H22V25H15Z M14,29H22V30H27V32H21V31H14Z M38,24H42V23H50V25H43V26H38Z M38,30H43V29H47V31H44V32H38Z" />
+    <!-- An editor's insertion caret marks the missing line. -->
+    <path android:fillColor="#D34229" android:pathData="M42,39V36H44V33H46V31H48V33H50V36H52V39H49V37H48V35H46V37H45V39Z" />
+</vector>

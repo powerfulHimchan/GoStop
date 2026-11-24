@@ -1,7 +1,10 @@
-<vector xmlns:android="http://schemas.android.com/apk/res/android"
-    android:width="48dp" android:height="48dp" android:viewportWidth="48" android:viewportHeight="48">
-    <path android:fillColor="#101B2C" android:pathData="M0,0H48V48H0Z" />
-    <path android:fillColor="#263750" android:pathData="M4,4H44V44H4Z" />
-    <path android:fillColor="#68BEAA" android:pathData="M14,10H20V17H23V22H28V38H21V24H18V20H14Z" />
-    <path android:fillColor="#F5C482" android:pathData="M29,10H35V20H31V24H28V38H21V22H26V17H29Z" />
-</vector>
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item>
+        <shape android:shape="rectangle">
+            <solid android:color="@color/icon_teal" />
+            <corners android:radius="9dp" />
+            <size android:width="48dp" android:height="48dp" />
+        </shape>
+    </item>
+    <item android:drawable="@drawable/icon_book" />
+</layer-list>
