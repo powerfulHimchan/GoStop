@@ -39,6 +39,20 @@ final class SceneAmbience {
                 shimmer(canvas, seconds, 111, 84, 126, 69, 30, WATER);
                 shimmer(canvas, seconds + 3f, 56, 84, 51, 22, 11, WATER);
             }
+            case SOLO_BREAKFAST -> steam(canvas, seconds, 77, 116, 9);
+            case UDON_REUNION -> {
+                steam(canvas, seconds, 48, 111, 7);
+                steam(canvas, seconds + 0.6f, 142, 111, 7);
+            }
+            case LATE_DINNER -> steam(canvas, seconds, 46, 126, 6);
+            case GUITAR_DUET -> shimmer(canvas, seconds, 184, 89, 48, 25, 8, WATER);
+            case HARBOR_SHIFT -> shimmer(canvas, seconds, 121, 84, 35, 7, 5, WATER);
+            case APPROVAL_CALL, ESSAY_DESK -> dust(canvas, seconds, 82, 57, 41, 39, 5, WARM);
+            case PACKED_RICE, SIMPLE_MEAL -> dust(canvas, seconds, 190, 44, 40, 48, 4, WARM);
+            case RENT_BUDGET, EMPTY_FLAT -> dust(canvas, seconds, 158, 45, 51, 37, 5, WARM);
+            case MOVING_TOGETHER, GUITAR_SALE, TEAM_HANDOFF -> dust(canvas, seconds, 99, 12, 94, 31, 5, WARM);
+            case PRESS_CALL, FIRST_READING, SHARED_PROOF, RETURNED_BOOK -> dust(canvas, seconds, 60, 29, 43, 33, 5, WARM);
+            case TRAIN_CAUGHT, TRAIN_MISSED -> dust(canvas, seconds, 150, 16, 60, 17, 4, WARM);
             case KITCHEN -> steam(canvas, seconds, 170, 118, 15);
             case DESK -> rain(canvas, seconds, 133, 239, 3, 86, 19);
             case CAFE -> {

@@ -33,9 +33,10 @@ final class Story {
             List<List<Paragraph>> epilogue = new ArrayList<>();
             List<Paragraph> variants = new ArrayList<>();
             for (int index = 2; index < block.size(); index++) {
-                String[] row = fields(block.get(index), 2);
+                String[] row = block.get(index).split("\\|", -1);
+                require(row.length == 2 || row.length == 3, "Invalid epilogue: " + id);
                 Condition condition = Condition.parse(row[0]);
-                variants.add(new Paragraph(condition, row[1]));
+                variants.add(new Paragraph(condition, row[1], row.length == 3 ? Art.valueOf(row[2]) : null));
                 if (condition.isFallback()) {
                     require(variants.size() >= 2, "Missing epilogue variation: " + id);
                     epilogue.add(variants);
@@ -186,7 +187,12 @@ final class Story {
     enum Art {
         ALLEY, OFFICE, KITCHEN, RIVER, DESK, CAFE, SUBWAY, HOME, ENTRY, WALK, DEPOT, GUITAR,
         BOOKSHOP, PORT, MUSICSHOP, ROOFTOP, CONTROL, PRINTSHOP, MARKET, VAN,
-        CHASE, STORE_MEET, PUBLISHER, PRESS, BUSAN_PUBLISHER, PROOFS, CHASE_STILL, ALLEY_EXIT
+        CHASE, STORE_MEET, PUBLISHER, PRESS, BUSAN_PUBLISHER, PROOFS, CHASE_STILL, ALLEY_EXIT,
+        PRESS_CALL, APPROVAL_CALL, LATE_DINNER, TEAM_HANDOFF,
+        ESSAY_DESK, FIRST_READING, SHARED_PROOF, RETURNED_BOOK,
+        RENT_BUDGET, GUITAR_SALE, GUITAR_DUET, HARBOR_SHIFT,
+        MOVING_TOGETHER, EMPTY_FLAT, SOLO_BREAKFAST, UDON_REUNION,
+        PACKED_RICE, SIMPLE_MEAL, TRAIN_CAUGHT, TRAIN_MISSED
     }
 
     enum Motion {
@@ -252,13 +258,24 @@ final class Story {
         }
 
         String description(EnumSet<Mark> marks) {
-            return body + "\n\n" + paragraph(0, marks) + "\n\n" + paragraph(1, marks);
+            return body + "\n\n" + paragraph(0, marks).text + "\n\n" + paragraph(1, marks).text;
         }
 
-        private String paragraph(int index, EnumSet<Mark> marks) {
+        Art illustration(EnumSet<Mark> marks) {
+            // A later illustrated moment in the epilogue takes precedence.
+            for (int index = epilogue.size() - 1; index >= 0; index--) {
+                Art illustration = paragraph(index, marks).art;
+                if (illustration != null) {
+                    return illustration;
+                }
+            }
+            return art;
+        }
+
+        private Paragraph paragraph(int index, EnumSet<Mark> marks) {
             for (Paragraph variant : epilogue.get(index)) {
                 if (variant.condition.matches(marks)) {
-                    return variant.text;
+                    return variant;
                 }
             }
             throw new IllegalStateException("Missing epilogue paragraph: " + id);
@@ -268,8 +285,10 @@ final class Story {
     private static final class Paragraph {
         final Condition condition;
         final String text;
+        final Art art;
 
-        Paragraph(Condition condition, String text) {
+        Paragraph(Condition condition, String text, Art art) {
+            this.art = art;
             this.condition = condition;
             this.text = text;
         }

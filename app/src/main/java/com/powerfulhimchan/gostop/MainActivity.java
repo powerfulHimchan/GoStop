@@ -573,7 +573,7 @@ public final class MainActivity extends Activity {
             Story.Ending ending = game.ending();
             String key = ENDING_PREFIX + edition + "_" + ending.id;
             editor.putString(key, new EndingRecord(ending.title, ending.category,
-                    ending.art, game.description()).encode());
+                    game.art(), game.description()).encode());
         }
         return editor;
     }

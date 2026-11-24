@@ -10,14 +10,15 @@ import android.graphics.Rect;
 import android.graphics.RectF;
 import android.os.Build;
 import android.os.SystemClock;
+import android.util.LruCache;
 import android.view.View;
 import android.view.animation.LinearInterpolator;
-import java.util.EnumMap;
 
 final class SceneArt extends View {
     private static final float ASPECT = 1.5f;
     private static final int AMBIENT_FRAME_MS = 70;
-    private final EnumMap<Story.Art, Bitmap> illustrations = new EnumMap<>(Story.Art.class);
+    // Each 480 x 320 illustration decodes to about 600 KiB.
+    private final LruCache<Story.Art, Bitmap> illustrations = new LruCache<>(8);
     private final RectF bounds = new RectF();
     private final Paint paint = new Paint();
     private final SceneAmbience ambience = new SceneAmbience();
@@ -71,6 +72,26 @@ final class SceneArt extends View {
                 case PRESS -> R.drawable.story_press;
                 case BUSAN_PUBLISHER -> R.drawable.story_busan_publisher;
                 case PROOFS -> R.drawable.story_proofs;
+                case PRESS_CALL -> R.drawable.story_press_call;
+                case APPROVAL_CALL -> R.drawable.story_approval_call;
+                case LATE_DINNER -> R.drawable.story_late_dinner;
+                case TEAM_HANDOFF -> R.drawable.story_team_handoff;
+                case ESSAY_DESK -> R.drawable.story_essay_desk;
+                case FIRST_READING -> R.drawable.story_first_reading;
+                case SHARED_PROOF -> R.drawable.story_shared_proof;
+                case RETURNED_BOOK -> R.drawable.story_returned_book;
+                case RENT_BUDGET -> R.drawable.story_rent_budget;
+                case GUITAR_SALE -> R.drawable.story_guitar_sale;
+                case GUITAR_DUET -> R.drawable.story_guitar_duet;
+                case HARBOR_SHIFT -> R.drawable.story_harbor_shift;
+                case MOVING_TOGETHER -> R.drawable.story_moving_together;
+                case EMPTY_FLAT -> R.drawable.story_empty_flat;
+                case SOLO_BREAKFAST -> R.drawable.story_solo_breakfast;
+                case UDON_REUNION -> R.drawable.story_udon_reunion;
+                case PACKED_RICE -> R.drawable.story_packed_rice;
+                case SIMPLE_MEAL -> R.drawable.story_simple_meal;
+                case TRAIN_CAUGHT -> R.drawable.story_train_caught;
+                case TRAIN_MISSED -> R.drawable.story_train_missed;
             };
             next = BitmapFactory.decodeResource(getResources(), resource);
             illustrations.put(art, next);
